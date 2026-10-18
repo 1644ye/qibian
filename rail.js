@@ -1,7 +1,7 @@
 (() => {
   if (window.top !== window || !/^https?:$/.test(location.protocol)) return;
   const hostId = 'qibian-mini-rail';
-  const revision = '1.4.11';
+  const revision = '1.5.2';
   if (globalThis.__qibianRail?.host?.isConnected && globalThis.__qibianRail.revision === revision) return;
   try { globalThis.__qibianRail?.destroy(); } catch { /* Old extension contexts may already be invalidated after an update. */ }
   document.getElementById(hostId)?.remove();
@@ -219,7 +219,7 @@
       visible = !!message.visible;
       // Legacy visibility-only messages can be stale; only the new native state
       // owns the surface, so they cannot strand the user with invisible icons.
-      if (typeof message.nativeOpen === 'boolean') { surfaceRevision++; applyNativeState(message.nativeOpen); }
+      if (typeof message.nativeOpen === 'boolean') { if (message.nativeOpen !== nativeOpen) surfaceRevision++; applyNativeState(message.nativeOpen); }
       sendResponse({ ok:true });
     }
   }

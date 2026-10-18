@@ -2,12 +2,12 @@
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { loadChromium, edgeLaunchOptions } from './browser-runtime.mjs';
 import assert from 'node:assert/strict';
 import { defaults } from '../core.js';
 
-const { chromium } = await import(pathToFileURL(process.argv[2] || 'C:/Users/yeb/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
-const root = resolve('.');
+const chromium = await loadChromium(process.argv[2]);
+const root = resolve(process.env.QIBIAN_EXTENSION_ROOT || '.');
 await mkdir('artifacts', { recursive: true });
 const server = createServer(async (req, res) => {
   try {
@@ -21,7 +21,7 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
 let context;
 try {
-  context = await chromium.launchPersistentContext('', { channel: 'msedge', headless: true, viewport: { width: 390, height: 1000 }, args: [`--disable-extensions-except=${root}`, `--load-extension=${root}`] });
+  context = await chromium.launchPersistentContext('', { ...edgeLaunchOptions(), headless: true, viewport: { width: 390, height: 1000 }, args: [`--disable-extensions-except=${root}`, `--load-extension=${root}`] });
   let worker = context.serviceWorkers()[0];
   if (!worker) worker = await context.waitForEvent('serviceworker', { timeout: 8000 }).catch(() => null);
   const base = worker ? `chrome-extension://${new URL(worker.url()).host}` : origin;

@@ -1,0 +1,118 @@
+name: Build, verify and release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.22.0'
+          cache: pnpm
+      - name: Verify version and absence of an existing release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content manifest.json -Raw | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            if ($env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag must match manifest version exactly' }
+            $existing = gh release list --repo $env:GITHUB_REPOSITORY --limit 1000 --json tagName | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw 'Could not check existing releases' }
+            if ($existing.tagName -contains $env:GITHUB_REF_NAME) { throw 'Release already exists; refusing to replace its assets' }
+          }
+          if (!(Test-Path "releases/v$version.md")) { throw 'Release notes are missing' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm test
+      - name: Build finished packages
+        run: pnpm package
+      - name: Extract the actual distributable
+        shell: pwsh
+        run: |
+          $version = (Get-Content manifest.json -Raw | ConvertFrom-Json).version
+          Expand-Archive -LiteralPath "dist/qibian-$version-windows-x64.zip" -DestinationPath artifacts/release-extracted
+          "QIBIAN_EXTENSION_ROOT=$pwd/artifacts/release-extracted/extension" >> $env:GITHUB_ENV
+          "QIBIAN_SYNC_ROOT=$pwd/artifacts/release-extracted/sync" >> $env:GITHUB_ENV
+          "QIBIAN_SYNC_ARCHIVE=$pwd/dist/qibian-sync-$version-windows-x64-portable.zip" >> $env:GITHUB_ENV
+      - name: Verify resources and bundled runtime
+        run: node scripts/verify-release.mjs
+      - name: Test the portable launcher without installed Node
+        run: pnpm test:portable
+      - name: Test the bundled service
+        run: node tests/sync-bundle-smoke.mjs
+      - name: Website metadata and custom icons
+        run: node tests/website-browser.mjs
+      - name: Cards, import, export and appearance
+        run: node tests/revision-browser.mjs
+      - name: Music, playlists and persistence
+        run: node tests/modern-browser.mjs
+      - name: Native sidebar and narrow icon rail
+        run: node tests/display-mode-browser.mjs --return-to-web --with-music --exclusive-surfaces
+      - name: Repeated native state notification race
+        run: node tests/rail-race-browser.mjs
+      - name: Real Edge and Chrome synchronization
+        run: node tests/sync-browser.mjs
+      - name: Save complete verified assets
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: qibian-release
+          if-no-files-found: error
+          path: |
+            dist/qibian-*-windows-x64.zip
+            dist/qibian-extension-*.zip
+            dist/qibian-sync-*-windows-x64-portable.zip
+            dist/SHA256SUMS.txt
+          retention-days: 14
+
+  publish:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: qibian-release
+          path: release-assets
+      - name: Publish all verified assets together
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          cd release-assets
+          sha256sum --check SHA256SUMS.txt
+          test "$(find . -maxdepth 1 -type f | wc -l)" -eq 4
+          if gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 --json tagName --jq '.[].tagName' | grep -Fxq "$RELEASE_TAG"; then
+            echo 'Release already exists; refusing to overwrite.' >&2
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" \
+            "qibian-$version-windows-x64.zip" \
+            "qibian-extension-$version.zip" \
+            "qibian-sync-$version-windows-x64-portable.zip" \
+            SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --draft \
+            --title "栖边 $version" --notes-file "../releases/$RELEASE_TAG.md"
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

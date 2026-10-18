@@ -1,12 +1,12 @@
 // Run: node tests/revision-browser.mjs <absolute path to playwright/index.mjs>
 // Uses a fresh real Edge extension profile; all HTTP(S) traffic is fixture-routed.
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { readFile } from 'node:fs/promises';
+import { loadChromium, edgeLaunchOptions } from './browser-runtime.mjs';
 import assert from 'node:assert/strict';
 import { defaults } from '../core.js';
 
-const runtime = process.argv[2] || 'C:/Users/yeb/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
-const { chromium } = await import(pathToFileURL(runtime).href);
+const chromium = await loadChromium(process.argv[2]);
 const root = resolve(process.env.QIBIAN_EXTENSION_ROOT || '.');
 const passed = [];
 const errors = [];
@@ -16,7 +16,7 @@ function record(name) { passed.push(name); console.log(`PASS ${name}`); }
 
 try {
   context = await chromium.launchPersistentContext('', {
-    channel: 'msedge', headless: true, viewport: { width: 420, height: 1100 },
+    ...edgeLaunchOptions(), headless: true, viewport: { width: 420, height: 1100 },
     args: [`--disable-extensions-except=${root}`, `--load-extension=${root}`]
   });
   await context.route(/^https?:\/\//, route => {
@@ -217,6 +217,25 @@ try {
   assert.equal(await page.locator('.card img:not(.site-icon img)').count(), 0);
   assert.equal(await page.evaluate(() => Boolean(window.importedScriptRan)), false);
   record('real-netscape-bookmarks-html-nesting-entities-url-safety-and-persistence');
+
+  // Read the actual browser download and restore it through the user import control.
+  const beforeBackup = await saved();
+  await settings();
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#export').click()]);
+  const backup = await readFile(await download.path());
+  assert.deepEqual(JSON.parse(backup), beforeBackup);
+  await close('#settings');
+  await add('便笺');
+  await page.getByLabel('卡片名称', { exact:true }).fill('发布备份恢复检查');
+  await submit();
+  assert.ok((await saved()).cards.some(item => item.title === '发布备份恢复检查'));
+  await settings();
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('#import-file').setInputFiles({ name:'backup.json', mimeType:'application/json', buffer:backup });
+  await page.locator('#settings').waitFor({ state:'hidden' });
+  await reload();
+  assert.deepEqual(await saved(), beforeBackup);
+  record('actual-json-download-and-user-import-restore-layout-settings-icons-and-links');
 
   await page.setViewportSize({ width: 300, height: 900 });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);

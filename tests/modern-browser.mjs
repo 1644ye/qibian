@@ -1,11 +1,11 @@
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { loadChromium, edgeLaunchOptions } from './browser-runtime.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { defaults } from '../core.js';
-const { chromium } = await import(pathToFileURL('C:/Users/yeb/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
+const chromium = await loadChromium();
 const root = resolve(process.env.QIBIAN_EXTENSION_ROOT || '.'), profile = resolve('artifacts', 'modern-profile-' + Date.now()); await mkdir(profile, { recursive: true });
-const launch = () => chromium.launchPersistentContext(profile, { channel:'msedge', headless:true, viewport:{width:1100,height:900}, args:[`--disable-extensions-except=${root}`, `--load-extension=${root}`] });
+const launch = () => chromium.launchPersistentContext(profile, { ...edgeLaunchOptions(), headless:true, viewport:{width:1100,height:900}, args:[`--disable-extensions-except=${root}`, `--load-extension=${root}`] });
 let ctx = await launch();
 const passed = [], errors = [];
 function wav(seconds) { const samples = Math.floor(8000 * seconds), b = Buffer.alloc(44 + samples * 2); b.write('RIFF'); b.writeUInt32LE(b.length - 8, 4); b.write('WAVEfmt ', 8); b.writeUInt32LE(16,16); b.writeUInt16LE(1,20); b.writeUInt16LE(1,22); b.writeUInt32LE(8000,24); b.writeUInt32LE(16000,28); b.writeUInt16LE(2,32); b.writeUInt16LE(16,34); b.write('data',36); b.writeUInt32LE(samples*2,40); for(let i=0;i<samples;i++)b.writeInt16LE(Math.round(300*Math.sin(i*.3)),44+i*2); return b; }

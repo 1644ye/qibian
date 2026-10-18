@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'Stop'
-$runtime = Get-Command node -ErrorAction SilentlyContinue
-if (!$runtime) {
-  $bundled = Join-Path $env:USERPROFILE '.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
-  if (Test-Path -LiteralPath $bundled) { $nodePath = $bundled }
-  else { throw '请先安装 Node.js 20 或更新版本，然后重新运行。https://nodejs.org/' }
-} else { $nodePath = $runtime.Source }
+$nodePath = Join-Path $PSScriptRoot 'runtime\node.exe'
+if (!(Test-Path -LiteralPath $nodePath -PathType Leaf)) {
+  throw '缺少随包运行时 runtime\node.exe。请完整解压 Windows x64 便携包后启动，不要只复制启动脚本。'
+}
+if (![Environment]::Is64BitOperatingSystem) { throw '此便携包需要 64 位 Windows。' }
 & $nodePath (Join-Path $PSScriptRoot 'server.cjs')
+exit $LASTEXITCODE

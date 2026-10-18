@@ -1,22 +1,23 @@
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { loadChromium, edgeLaunchOptions, chromeLaunchOptions } from './browser-runtime.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
-import { startServer } from '../companion/server.mjs';
+import { startTestService } from './sync-runtime.mjs';
 import { defaults, validateState } from '../core.js';
-const { chromium } = await import(pathToFileURL('C:/Users/yeb/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
+const chromium = await loadChromium();
 const root = resolve(process.env.QIBIAN_EXTENSION_ROOT || '.');
 const directory = resolve('artifacts', 'sync-' + Date.now()); await mkdir(directory, { recursive:true });
-let service = await startServer({ directory:resolve(directory, 'service'), port:0 });
+await mkdir(resolve(directory, 'service'), { recursive:true });
+let service = await startTestService({ directory:resolve(directory, 'service'), port:0 });
 const contexts = [], errors = [], passed = [];
 function record(name) { passed.push(name); console.log('PASS', name); }
 async function wait(predicate, label, timeout = 25000) { const until = Date.now() + timeout; while (Date.now() < until) { if (await predicate()) return; await new Promise(r => setTimeout(r, 100)); } throw new Error('Timed out: ' + label); }
 function wav(seconds) { const b = Buffer.alloc(44 + 8000 * seconds * 2); b.write('RIFF'); b.writeUInt32LE(b.length - 8, 4); b.write('WAVEfmt ', 8); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(8000, 24); b.writeUInt32LE(16000, 28); b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write('data', 36); b.writeUInt32LE(b.length - 44, 40); for (let i = 44; i < b.length; i += 2) b.writeInt16LE(Math.round(300 * Math.sin(i * .3)), i); return b; }
-async function browser(name, options) {
-  const context = await chromium.launchPersistentContext(resolve(directory, name), { ...options, headless:true, ignoreDefaultArgs:['--disable-extensions'], viewport:{ width:1100, height:900 }, args:[...(options.executablePath ? [] : [`--disable-extensions-except=${root}`, `--load-extension=${root}`]), '--autoplay-policy=no-user-gesture-required', '--enable-unsafe-extension-debugging'] });
+async function browser(name, options, debugLoad = false) {
+  const context = await chromium.launchPersistentContext(resolve(directory, name), { ...options, headless:true, ignoreDefaultArgs:['--disable-extensions'], viewport:{ width:1100, height:900 }, args:[...(debugLoad ? [] : [`--disable-extensions-except=${root}`, `--load-extension=${root}`]), '--autoplay-policy=no-user-gesture-required', '--enable-unsafe-extension-debugging'] });
   contexts.push(context);
   let loadedId;
-  if (options.executablePath) {
+  if (debugLoad) {
     const session = await context.browser().newBrowserCDPSession();
     loadedId = (await session.send('Extensions.loadUnpacked', { path:root })).id;
   }
@@ -42,8 +43,8 @@ async function browser(name, options) {
   return { context, worker, page, read, command, configure, origin };
 }
 try {
-  const edge = await browser('Microsoft Edge', { channel:'msedge' });
-  const chrome = await browser('Google Chrome', { executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe' });
+  const edge = await browser('Microsoft Edge', edgeLaunchOptions());
+  const chrome = await browser('Google Chrome', await chromeLaunchOptions(), true);
   record('Real Edge and Google Chrome load the extension');
   await edge.page.getByRole('button', { name:'选择音乐', exact:true }).click();
   const track = wav(120);
@@ -112,7 +113,7 @@ try {
   await edge.page.getByRole('button', { name:'外观与设置', exact:true }).click();
   await edge.page.locator('[name="palettePreset"]').selectOption('sunset');
   await wait(async () => (await edge.read('syncOutbox'))?.length > 0, 'offline queued edit');
-  service = await startServer({ directory:resolve(directory, 'service'), port, token });
+  service = await startTestService({ directory:resolve(directory, 'service'), port, token });
   await wait(async () => (await chrome.read('workspace')).settings.palettePreset === 'sunset', 'reconnected edit');
   await wait(async () => !(await edge.read('syncOutbox'))?.length, 'outbox acknowledged');
   record('Service interruption stops shared playback; offline edits replay after reconnect');

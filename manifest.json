@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "栖边 · 自定义侧边栏",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "把网站、文件、天气、信息流和媒体放在手边，自由排列，随心设置外观。",
   "permissions": [
     "sidePanel",

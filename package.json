@@ -1,17 +1,23 @@
 {
   "name": "qibian-edge-sidebar",
+  "version": "1.5.2",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "engines": { "node": ">=24.22.0 <25" },
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:sync": "node scripts/build-sync.mjs",
     "test": "node --test tests/core.test.js tests/importers.test.js tests/rail.test.mjs tests/music-workspace.test.js tests/panel-transport.test.js tests/sync-server.test.mjs",
-    "check": "node --check app.js && node --check core.js && node --check background.js && node --check rail.js && node --check importers.js && node --check service-worker.js && node --check audio-engine.js && node --check workspace-store.js && node --check panel-transport.js && node --check panel-launcher.js",
+    "check": "node scripts/check.mjs",
     "test:edge": "node tests/modern-browser.mjs",
-    "test:sync": "node tests/sync-browser.mjs"
+    "test:sync": "node tests/sync-browser.mjs",
+    "package": "pwsh -NoProfile -File scripts/package.ps1",
+    "test:portable": "node tests/portable-sync.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2",
+    "playwright": "1.62.1",
     "ws": "8.21.3"
   }
 }

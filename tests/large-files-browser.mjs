@@ -1,13 +1,13 @@
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { loadChromium, edgeLaunchOptions } from './browser-runtime.mjs';
 import { mkdir, writeFile, truncate } from 'node:fs/promises';
 import assert from 'node:assert/strict';
-const { chromium } = await import(pathToFileURL('C:/Users/yeb/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
-const root=resolve('.'), profile=resolve('artifacts','large-files-profile-'+Date.now()); await mkdir(profile,{recursive:true});
+const chromium = await loadChromium();
+const root=resolve(process.env.QIBIAN_EXTENSION_ROOT || '.'), profile=resolve('artifacts','large-files-profile-'+Date.now()); await mkdir(profile,{recursive:true});
 const file=resolve(profile,'large.wav'), size=51*1024*1024+44;
 const header=Buffer.alloc(44); header.write('RIFF'); header.writeUInt32LE(size-8,4); header.write('WAVEfmt ',8); header.writeUInt32LE(16,16); header.writeUInt16LE(1,20); header.writeUInt16LE(1,22); header.writeUInt32LE(8000,24); header.writeUInt32LE(16000,28); header.writeUInt16LE(2,32); header.writeUInt16LE(16,34); header.write('data',36); header.writeUInt32LE(size-44,40);
 await writeFile(file,header); await truncate(file,size);
-const ctx=await chromium.launchPersistentContext(profile,{channel:'msedge',headless:true,args:[`--disable-extensions-except=${root}`,`--load-extension=${root}`]});
+const ctx=await chromium.launchPersistentContext(profile,{...edgeLaunchOptions(),headless:true,args:[`--disable-extensions-except=${root}`,`--load-extension=${root}`]});
 try {
   const worker=ctx.serviceWorkers()[0]||await ctx.waitForEvent('serviceworker'); const base=worker.url().split('/').slice(0,3).join('/');
   const page=await ctx.newPage(); const errors=[]; page.on('pageerror',e=>errors.push(e.message)); await page.goto(base+'/sidepanel.html');

@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { loadChromium, edgeLaunchOptions } from './browser-runtime.mjs';
 import { mkdir } from 'node:fs/promises';
-const { chromium } = await import(pathToFileURL('C:/Users/yeb/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
+const chromium = await loadChromium();
 const root = resolve(process.env.QIBIAN_EXTENSION_ROOT || '.');
-const context = await chromium.launchPersistentContext('', { channel:'msedge', headless:true, args:[`--disable-extensions-except=${root}`, `--load-extension=${root}`] });
+const context = await chromium.launchPersistentContext('', { ...edgeLaunchOptions(), headless:true, args:[`--disable-extensions-except=${root}`, `--load-extension=${root}`] });
 const errors = [], passed = [];
 let png;
 try {

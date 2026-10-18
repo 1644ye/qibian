@@ -1,11 +1,11 @@
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { loadChromium, edgeLaunchOptions } from './browser-runtime.mjs';
 import { mkdir } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { defaults } from '../core.js';
-const {chromium}=await import(pathToFileURL('C:/Users/yeb/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
+const chromium=await loadChromium();
 const root=resolve(process.env.QIBIAN_EXTENSION_ROOT || '.'),profile=resolve('artifacts','shortcut-profile-'+Date.now());await mkdir(profile,{recursive:true});
-const context=await chromium.launchPersistentContext(profile,{channel:'msedge',headless:true,args:[`--disable-extensions-except=${root}`,`--load-extension=${root}`]});
+const context=await chromium.launchPersistentContext(profile,{...edgeLaunchOptions(),headless:true,args:[`--disable-extensions-except=${root}`,`--load-extension=${root}`]});
 const results=[];
 try {
  const worker=context.serviceWorkers()[0]||await context.waitForEvent('serviceworker');const base=worker.url().split('/').slice(0,3).join('/');
