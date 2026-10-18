@@ -1,0 +1,91 @@
+/* A quiet, compact interface; every color comes from the selected preset. */
+:root { font-family: Inter, 'Segoe UI', 'Microsoft YaHei', sans-serif; font-size:14px; --gap:12px; }
+.shell { padding:20px 16px; max-width:960px; }
+header { padding-bottom:18px; border-bottom:1px solid var(--line); }
+.brand { font-size:18px; letter-spacing:0; gap:9px; }
+.brand-mark { width:30px; height:30px; border-radius:8px; font:600 16px 'Segoe UI',sans-serif; }
+.brand small,.intro .eyebrow,.dialog-heading .eyebrow,.add-button small,.footer-right,.clock-caption { display:none; }
+.icon-button { border-radius:8px; width:32px; height:32px; font-size:18px; background:var(--surface); }
+.intro { padding:22px 0 12px; }
+h1 { font-size:22px; font-weight:650; letter-spacing:-.4px; margin:0 0 6px; }
+.intro p { font-size:12px; }
+.workspace-bar { border:0; padding:12px 0; }
+.card { padding:16px; animation:none; box-shadow:0 1px 2px color-mix(in srgb,var(--text) 3%,transparent); }
+.card-head { margin-bottom:16px; gap:10px; }
+.card-label { font-size:10px; letter-spacing:0; }
+.card-title { font-size:12px; }
+.card-tools button { font-size:15px; }
+.text-button,.muted,.status-line { font-size:12px; }
+.primary,.secondary { padding:9px 12px; font-size:12px; }
+.note { line-height:1.8; }
+.clock-time { font-weight:500; font-size:46px; letter-spacing:-1px; }
+.site-main { margin:12px 0 20px; }
+.record { width:48px; height:48px; border-radius:12px; background:var(--bg); border:1px solid var(--line); }
+.record:after { content:'♫'; background:none; color:var(--accent); font-size:23px; }
+.media-name { font-size:17px; font-weight:600; margin:0; }
+.media-hero .muted { margin:3px 0 0; }
+.media-controls { gap:20px; }
+.media-controls button { border-radius:10px; width:36px; height:36px; }
+.media-controls .play { width:44px; height:44px; border-radius:12px; border-color:var(--accent); }
+.is-playing .record { border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface)); }
+.is-playing .record:after { content:'♫';animation:music-pulse 1s ease-in-out infinite alternate; }
+.is-playing .music-status { color:var(--accent);font-weight:650; }
+.is-playing .music-status:before { content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:6px; }
+.is-playing .local-play { box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent); }
+.compact-navigation { display:none; }
+.compact-mode .shell { display:none; }
+.compact-mode .compact-navigation { position:fixed;top:12px;right:8px;bottom:12px;width:48px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:12px; }
+.compact-navigation button { width:34px;height:34px;flex:none;display:grid;place-items:center;border:1px solid transparent;border-radius:8px;background:var(--bg);color:var(--text);font-size:18px;padding:0; }
+.compact-navigation .compact-expand { background:var(--accent);color:var(--on-accent); }
+.compact-navigation .compact-cards { flex:1;min-height:0;overflow:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:8px; }
+.compact-card .site-icon { width:32px;height:32px;border:0;border-radius:6px;font-size:18px; }
+.compact-navigation .playing { border-color:var(--accent);box-shadow:inset 0 -3px var(--accent);color:var(--accent); }
+.quick-panel .intro,.quick-panel .workspace-bar,.quick-panel #add-button,.quick-panel footer { display:none; }
+.quick-panel header { padding-bottom:12px;margin-bottom:12px; }
+.quick-panel .shell { padding:14px; }
+#quick-view > .icon-button { margin-left:auto;margin-bottom:12px; }
+@keyframes music-pulse { from { transform:scale(.85); } to { transform:scale(1.15); } }
+@media(prefers-reduced-motion:reduce) { .is-playing .record:after { animation:none; } }
+.music-time { text-align:right; font-size:11px; font-variant-numeric:tabular-nums; }
+.music-seek { margin-top:12px; }
+.volume-label { display:flex; flex-direction:row; align-items:center; gap:16px; font-size:11px; color:var(--muted); }
+.volume-label input { width:110px; }
+.remote-section { border-top:1px solid var(--line); margin-top:18px; padding-top:14px; }
+.remote-section summary { color:var(--muted); cursor:pointer; font-size:12px; }
+.remote-section[open] summary { margin-bottom:14px; }
+.section-label { font-size:11px; letter-spacing:0; }
+.add-button { border-style:solid; padding:13px; margin-top:12px; background:var(--surface); }
+footer { font-size:10px; margin-top:18px; }
+dialog { padding:22px; }
+#usage-guide { border:1px solid var(--line);border-radius:10px;margin:0 0 18px;padding:12px;background:var(--surface); }
+#usage-guide summary { cursor:pointer;font-size:13px;line-height:1.7;color:var(--text); }
+#usage-guide > summary { font-weight:600;color:var(--accent); }
+#usage-guide summary:focus-visible { outline:2px solid var(--accent);outline-offset:3px;border-radius:3px; }
+.guide-topic { border-top:1px solid var(--line);padding:10px 0; }
+.guide-topic:last-child { padding-bottom:0; }
+.guide-topic ol { margin:10px 0;padding-left:22px;font-size:12px;line-height:1.9;overflow-wrap:anywhere; }
+.guide-topic li + li { margin-top:8px; }
+.standalone-notice { position:relative;z-index:5;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;margin-right:64px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--line);color:var(--text);font-size:13px; }
+.dialog-heading h2 { font-size:19px; font-weight:600; margin:0; }
+dialog::backdrop { backdrop-filter:blur(2px); }
+.type-picker button { padding:10px 0; }
+.type-picker button span { font-size:18px; margin-bottom:5px; }
+.music-manager .shell { max-width:1120px; padding:28px 36px; }
+.music-manager .workspace-bar { display:none; }
+.music-manager .intro { padding:28px 0 22px; }
+.music-layout { display:grid; grid-template-columns:200px minmax(0,1fr); gap:28px; align-items:start; }
+#playlist-navigation { position:sticky; top:20px; }
+#playlist-navigation h2 { margin:0 0 12px; font-size:12px; color:var(--muted); font-weight:500; }
+.playlist-choice { width:100%; text-align:left; border-radius:8px; background:transparent; padding:12px; margin-bottom:4px; overflow-wrap:anywhere; }
+.playlist-choice.active { background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); color:var(--accent); font-weight:600; }
+.music-manager #cards { grid-template-columns:minmax(0,1fr)!important; }
+.music-manager .card { min-height:0; padding:24px; }
+.music-manager .playlist { max-height:480px; overflow:auto; }
+.music-manager .media-name { font-size:24px; }
+.music-manager .add-button { width:200px; }
+@media(max-width:600px) { .music-manager .shell { padding:18px; } .music-layout { grid-template-columns:minmax(0,1fr); gap:16px; } #playlist-navigation { position:static; display:flex; gap:8px; overflow:auto; } #playlist-navigation h2 { display:none; } .playlist-choice { width:auto; min-width:120px; } .music-manager .card { padding:16px; } }
+@media(min-width:580px) { h1 { font-size:24px; } }
+.sync-settings { border:1px solid var(--line); border-radius:12px; padding:14px; margin:0 0 16px; }
+.sync-settings summary { cursor:pointer; font-weight:600; }
+.sync-settings label { display:grid; gap:6px; margin:12px 0; }
+.sync-settings p { line-height:1.65; overflow-wrap:anywhere; }

@@ -1,0 +1,17 @@
+{
+  "name": "qibian-edge-sidebar",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:sync": "node scripts/build-sync.mjs",
+    "test": "node --test tests/core.test.js tests/importers.test.js tests/rail.test.mjs tests/music-workspace.test.js tests/panel-transport.test.js tests/sync-server.test.mjs",
+    "check": "node --check app.js && node --check core.js && node --check background.js && node --check rail.js && node --check importers.js && node --check service-worker.js && node --check audio-engine.js && node --check workspace-store.js && node --check panel-transport.js && node --check panel-launcher.js",
+    "test:edge": "node tests/modern-browser.mjs",
+    "test:sync": "node tests/sync-browser.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "ws": "8.21.3"
+  }
+}

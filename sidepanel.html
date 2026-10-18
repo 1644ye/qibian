@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>栖边</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="modern.css"><script type="module" src="app.js"></script></head>
+<body>
+  <div class="shell">
+    <header><a class="brand" href="#" aria-label="栖边首页"><span class="brand-mark">栖</span><span>栖边<small></small></span></a><div class="button-row"><button id="mini-button" class="icon-button" title="收起为右侧图标栏" aria-label="收起为图标模式">⇥</button><button id="settings-button" class="icon-button" title="外观与设置" aria-label="外观与设置">⚙</button></div></header>
+    <section class="intro"><div class="eyebrow"><span class="live-dot"></span> WORKSPACE</div><h1>我的空间</h1><p id="today"></p></section>
+    <div class="workspace-bar"><span>我的空间 <small id="count">0</small></span><button id="arrange" class="text-button" aria-pressed="false">⇅ 整理</button></div>
+    <main id="cards" aria-label="侧边栏内容"></main>
+    <div id="empty" hidden><span>＋</span><h2>从一个小小的收藏开始</h2><p>添加网站、文件，或一个实用的小组件。</p></div>
+    <button id="add-button" class="add-button"><span>＋</span> 添加内容 <small></small></button>
+    <footer><span class="live-dot"></span><span id="save-status">仅存于此设备</span><span class="footer-right">栖边 / 01</span></footer>
+  </div>
+  <dialog id="editor"><form id="card-form"><div class="dialog-heading"><div><div class="eyebrow"></div><h2 id="editor-title">添加到你的空间</h2></div><button type="button" class="icon-button close-dialog" aria-label="关闭">×</button></div><div id="type-picker" class="type-picker"></div><div id="fields"></div><p id="form-error" class="error" role="alert"></p><div class="dialog-actions"><button type="button" class="secondary close-dialog">取消</button><button type="submit" class="primary" id="submit-card">添加到空间</button></div></form></dialog>
+  <dialog id="settings"><div class="dialog-heading"><div><div class="eyebrow"></div><h2>外观与设置</h2></div><button class="icon-button close-dialog" aria-label="关闭">×</button></div>
+    <form id="settings-form">
+      <label>显示主题<select name="theme"><option value="light">浅色方案</option><option value="dark">深色方案</option><option value="system">跟随系统</option></select></label>
+      <label>全局圆角 <output id="radius-value">20 px</output><input type="range" name="radius" min="0" max="32" step="2"></label>
+      <p class="muted">卡片、设置窗口和其他弹窗共用此圆角。</p>
+      <div class="two-fields"><label>间距<select name="density"><option value="comfortable">舒适</option><option value="compact">紧凑</option></select></label><label>布局<select name="columns"><option value="1">单列</option><option value="2">双列（宽屏）</option></select></label></div>
+      <div class="settings-section"><h3>配色方案</h3><p class="muted">从多套预设中选择，当前预设会统一应用到所有模块、弹窗和缩略图标栏。</p><label>配色预设<select name="palettePreset"><option value="forest">森屿</option><option value="ocean">远海</option><option value="sunset">晚霞</option><option value="lavender">雾紫</option><option value="graphite">石墨</option><option value="custom">自定义</option></select></label><div id="scheme-preview" class="scheme-preview" aria-label="当前方案颜色预览"></div><p id="scheme-description" class="muted"></p><div id="custom-palette"><label>编辑自定义方案<select id="palette-mode"><option value="light">浅色版本</option><option value="dark">深色版本</option></select></label><div id="palette-fields" class="two-fields"></div><button id="reset-palette" type="button" class="secondary">恢复自定义方案默认颜色</button></div></div>
+    </form>
+    <div class="settings-section"><h3>导入网站</h3><p class="muted">支持 OneTab 导出文本、收藏夹 HTML，或直接读取 Edge 收藏夹。重复网址自动跳过，导入追加为网站卡片。</p><button id="links-import-button" class="secondary">OneTab / 收藏夹导入</button></div>
+    <div class="settings-section"><h3>备份与迁移</h3><p class="muted">配置包含布局、网站图标、链接和便笺；导入的文件、音视频需在新设备重新选择。导入配置会替换当前布局。</p><div class="button-row"><button id="export" class="secondary">导出配置</button><button id="import" class="secondary">导入配置</button></div></div>
+    <p class="muted">普通网页右侧默认显示缩略图标栏。浏览器内部页面请使用工具栏按钮。天气由 Open-Meteo 提供。</p>
+  </dialog>
+  <dialog id="links-import"><div class="dialog-heading"><h2>导入 OneTab / 收藏夹</h2><button class="icon-button close-dialog" aria-label="关闭">×</button></div><label>OneTab 导出文本<textarea id="onetab-text" class="field" rows="5" placeholder="https://example.com | 网站名称"></textarea></label><div class="button-row"><button id="parse-onetab" class="secondary">预览文本</button><button id="choose-links-file" class="secondary">选择 TXT / HTML 文件</button><button id="read-bookmarks" class="secondary">读取 Edge 收藏夹</button></div><input id="links-file" type="file" accept=".txt,.html,.htm,text/plain,text/html" hidden><p id="links-status" class="muted" role="status">导入前可预览结果，最多保留 200 张卡片。</p><ul id="links-preview" class="feed-list"></ul><div class="dialog-actions"><button id="apply-links" class="primary" disabled>导入网站</button></div></dialog>
+  <dialog id="preview"><div class="dialog-heading"><h2 id="preview-title">文件预览</h2><button class="icon-button close-dialog" aria-label="关闭">×</button></div><div id="preview-body"></div></dialog>
+  <input id="import-file" type="file" accept=".json,application/json" hidden><input id="media-file" type="file" accept="audio/*,video/*" multiple hidden>
+  <div id="toast" role="status" hidden></div>
+</body></html>

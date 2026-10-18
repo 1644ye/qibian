@@ -1,0 +1,77 @@
+{
+  "manifest_version": 3,
+  "name": "栖边 · 自定义侧边栏",
+  "version": "1.5.1",
+  "description": "把网站、文件、天气、信息流和媒体放在手边，自由排列，随心设置外观。",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "activeTab",
+    "scripting",
+    "offscreen",
+    "unlimitedStorage",
+    "alarms"
+  ],
+  "optional_permissions": [
+    "tabs",
+    "bookmarks"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*/*",
+        "http://*/*"
+      ],
+      "js": [
+        "rail.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "在当前网页右侧打开栖边"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'self';"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sidepanel.html",
+        "app.js",
+        "core.js",
+        "importers.js",
+        "workspace-store.js",
+        "panel-transport.js",
+        "panel-launcher.js",
+        "tutorial.js",
+        "sync-settings.js",
+        "website-editor.js",
+        "styles.css",
+        "modern.css"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    }
+  ]
+}
