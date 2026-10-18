@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { WebSocket } from 'ws';
 import { startServer } from '../companion/server.mjs';
 import { defaults } from '../core.js';
 const origin = 'chrome-extension://abcdefghijklmnopabcdefghijklmnop';
+await mkdir(resolve('artifacts'), { recursive:true });
 async function peer(server, name, token = server.token) {
   const ws = new WebSocket(`ws://127.0.0.1:${server.port}/sync`, { origin });
   const pending = new Map(), events = [];
