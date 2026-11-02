@@ -1,6 +1,6 @@
 import { defaults } from './core.js';
 import { mergePatch } from './workspace-store.js';
-import { fileIds, remapPatch } from './sync-model.js';
+import { fileIds, remapPatch, SYNC_PROTOCOL } from './sync-model.js';
 import { syncFile } from './sync-files.js';
 
 export function createSyncClient({ execute, display }) {
@@ -74,7 +74,8 @@ export function createSyncClient({ execute, display }) {
     await chrome.alarms.create('qibian-sync-reconnect', { periodInMinutes:1 });
     const activeGeneration = ++generation; joined = false; deferredWorkspace = null; uploaded.clear();
     const ws = new WebSocket(`ws://127.0.0.1:${config.port}/sync`); socket = ws;
-    ws.onopen = () => { lastPong = Date.now(); send({ type:'hello', ...config }); };
+    let compatibilityError = '';
+    ws.onopen = () => { lastPong = Date.now(); send({ type:'hello', ...config, protocol:SYNC_PROTOCOL }); };
     ws.onmessage = event => {
       if (activeGeneration !== generation) return;
       let message; try { message = JSON.parse(event.data); } catch { return; }
@@ -97,6 +98,7 @@ export function createSyncClient({ execute, display }) {
         })(); return;
       }
       if (message.type === 'authenticated') {
+        if (message.protocol !== SYNC_PROTOCOL) { compatibilityError = '同步服务版本过旧，请使用 1.6.0 或更新版本的完整包，并更新所有浏览器中的栖边。本地修改已保留。'; ws.close(); return; }
         void (async () => {
           // Stop any playback that began before pairing, before joining the shared player.
           await execute({ action:'silence' });
@@ -122,7 +124,7 @@ export function createSyncClient({ execute, display }) {
       joined = false; socket = null;
       for (const p of pending.values()) { clearTimeout(p.timer); p.reject(new Error('本机同步连接已断开。')); } pending.clear();
       void execute({ action:'silence' });
-      void status({ connected:false, error:event.code === 1008 ? '配对密钥不正确。' : '等待本机同步服务，修改已保存在本浏览器，连接后自动同步。' });
+      void status({ connected:false, error:compatibilityError || (event.reason === 'Unsupported protocol' ? '请更新所有浏览器中的栖边与本机同步服务到 1.6.0 或更新版本。' : event.code === 1008 ? '配对密钥不正确。' : '等待本机同步服务，修改已保存在本浏览器，连接后自动同步。') });
     };
   }
   setInterval(() => {

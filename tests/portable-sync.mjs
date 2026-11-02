@@ -51,7 +51,7 @@ async function connect(service) {
   const pending = new Map();
   socket.on('message', raw => { const reply = JSON.parse(raw); if (reply.type === 'reply') { const handler = pending.get(reply.request); if (handler) { pending.delete(reply.request); reply.error ? handler.reject(new Error(reply.error)) : handler.resolve(reply); } } });
   const authenticated = new Promise((resolve, reject) => { socket.once('message', raw => JSON.parse(raw).type === 'authenticated' ? resolve() : reject(new Error('Packaged service authentication failed'))); });
-  socket.send(JSON.stringify({ type:'hello', clientId:'portable-release-test', name:'Portable release smoke test', token:service.token }));
+  socket.send(JSON.stringify({ type:'hello', clientId:'portable-release-test', name:'Portable release smoke test', token:service.token, protocol:2 }));
   await authenticated;
   return { socket, rpc(message) { return new Promise((resolve, reject) => { const request = crypto.randomUUID(); pending.set(request, { resolve, reject }); socket.send(JSON.stringify({ ...message, request })); }); } };
 }

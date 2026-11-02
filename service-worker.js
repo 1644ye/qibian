@@ -2,6 +2,7 @@ import './background.js';
 import { writePatch } from './workspace-store.js';
 import { safeURL, defaults, validateState } from './core.js';
 import { createSyncClient } from './sync-client.js';
+import { openShortcut } from './shortcut.js';
 let creating;
 let indicator = '';
 async function displayMusic(state) {
@@ -20,12 +21,17 @@ async function ensurePlayer() {
   await creating;
 }
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
+  if (message?.type === 'qibian:rail-position' && sender.id === chrome.runtime.id && sender.tab && /^https?:/.test(sender.url || '')) {
+    if (!['left','right'].includes(message.side) || !Number.isFinite(message.offset) || message.offset < 0 || message.offset > 1) { respond({ ok:false, error:'位置无效。' }); return; }
+    writePatch({ settings:{ railSide:message.side, railOffset:message.offset }, cards:[], removed:[] }).then(() => respond({ ok:true }), error => respond({ ok:false, error:error.message })); return true;
+  }
   if (message?.type === 'qibian:activate-card' && sender.id === chrome.runtime.id && (sender.url?.startsWith(chrome.runtime.getURL('')) || sender.tab && /^https?:/.test(sender.url || ''))) {
     (async () => {
       const workspace = validateState((await chrome.storage.local.get('workspace')).workspace || defaults());
       const card = workspace.cards.find(c => c.id === message.cardId);
       if (!card) throw new Error('卡片不存在，请刷新图标栏。');
       if (card.type === 'website') { await chrome.tabs.create({ url:safeURL(card.url) }); return { ok:true }; }
+      if (card.type === 'shortcut') { await openShortcut(chrome, card.url); return { ok:true }; }
       if (card.type === 'media') {
         if (!card.tracks?.length && !card.fileId) throw new Error('歌单为空，请展开栖边添加音乐。');
         return sync.command({ cardId:card.id, action:'toggle-stop' });

@@ -65,6 +65,8 @@ try {
   await edge.page.getByRole('button', { name:'外观与设置', exact:true }).click();
   await edge.page.locator('[name="palettePreset"]').selectOption('ocean');
   await wait(async () => (await chrome.read('workspace')).settings.palettePreset === 'ocean', 'live settings');
+  await edge.page.getByLabel('停靠侧',{exact:true}).selectOption('left');
+  await wait(async () => (await chrome.read('workspace')).settings.railSide === 'left', 'rail position sync');
   await edge.page.locator('#settings .close-dialog').click();
   record('Edge setting changes reach Chrome without reloading');
   await chrome.page.getByRole('button', { name:'添加音乐', exact:true }).click();
@@ -93,6 +95,13 @@ try {
   await wait(async () => !(await edge.read('workspace')).cards.some(c => c.title === '同步图片'), 'remote deletion');
   assert.ok((await edge.read('workspace')).cards.some(c => c.title === '同步图片 副本'));
   record('Image files preserve preview type; card copy and deletion synchronize in both directions');
+  await edgePanel.getByRole('button',{name:/添加内容/}).click();
+  await edgePanel.locator('#type-picker').getByRole('button',{name:/快捷方式/}).click();
+  await edgePanel.getByLabel('卡片名称',{exact:true}).fill('快捷方式同步');
+  await edgePanel.getByLabel('快捷地址',{exact:true}).fill('chrome://bookmarks/');
+  await edgePanel.locator('#submit-card').click(); await edgePanel.locator('#editor').waitFor({state:'hidden'});
+  await wait(async () => (await chrome.read('workspace')).cards.some(c => c.type === 'shortcut' && c.url === 'chrome://bookmarks/'), 'shortcut sync');
+  record('Dock position and shortcut cards synchronize without losing new fields');
   await edgePanel.close(); await chromePanel.close();
   let result = await chrome.command('play'); assert.notEqual(result.ok, false, result.error);
   await wait(async () => (await edge.worker.evaluate(async () => (await chrome.storage.session.get('musicState')).musicState))?.paused === false, 'remote playing state');

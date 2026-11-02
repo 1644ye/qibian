@@ -1,3 +1,4 @@
+export const SYNC_PROTOCOL = 2;
 export const fileIds = workspace => [...new Set((workspace?.cards || []).flatMap(card => [card.fileId, ...(card.tracks || []).map(track => track.fileId)]).filter(Boolean))];
 export function remapPatch(patch, mapping = {}) {
   const id = value => mapping[value] || value;

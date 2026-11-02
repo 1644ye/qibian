@@ -1,14 +1,14 @@
 (() => {
   if (window.top !== window || !/^https?:$/.test(location.protocol)) return;
   const hostId = 'qibian-mini-rail';
-  const revision = '1.5.2';
+  const revision = '1.6.0';
   if (globalThis.__qibianRail?.host?.isConnected && globalThis.__qibianRail.revision === revision) return;
   try { globalThis.__qibianRail?.destroy(); } catch { /* Old extension contexts may already be invalidated after an update. */ }
   document.getElementById(hostId)?.remove();
 
   const host = document.createElement('div');
   host.id = hostId;
-  host.style.cssText = 'all:initial!important;position:fixed!important;top:min(100px,15vh)!important;right:8px!important;width:44px!important;height:auto!important;max-height:calc(100vh - 120px)!important;z-index:2147483646!important;display:block!important;color-scheme:normal!important;';
+  host.style.cssText = 'all:initial!important;position:fixed!important;top:min(100px,15vh)!important;right:8px!important;width:44px!important;height:auto!important;max-height:calc(100vh - 16px)!important;z-index:2147483646!important;display:block!important;color-scheme:normal!important;';
   const shadow = host.attachShadow({ mode: 'open' });
   const style = document.createElement('style');
   style.textContent = `
@@ -20,7 +20,7 @@
     button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
     .expand { background:var(--accent); color:var(--onAccent); font-size:17px; font-weight:650; margin-bottom:5px; }
     .expand:hover { background:var(--accent); border-color:var(--onAccent); }
-    .cards { display:flex; align-items:center; flex-direction:column; gap:5px; max-height:calc(100vh - 177px); overflow-y:auto; scrollbar-width:none; overscroll-behavior:contain; }
+    .cards { display:flex; align-items:center; flex-direction:column; gap:5px; max-height:calc(100vh - 100px); overflow-y:auto; scrollbar-width:none; overscroll-behavior:contain; }
     .cards::-webkit-scrollbar { display:none; }
     .cards:empty { display:none; }
     .small { font-size:11px; line-height:1.1; overflow-wrap:anywhere; }
@@ -33,6 +33,9 @@
     .frame-collapse { position:absolute;bottom:12px;right:12px;width:32px;height:32px;font-size:18px;border:1px solid var(--line);z-index:2; }
     button.playing { border-color:var(--accent);color:var(--accent);box-shadow:inset 0 -3px var(--accent); }
     .quick-frame { position:absolute;right:52px;top:0;width:min(380px,calc(100vw - 76px));height:min(560px,calc(100vh - 130px));border:1px solid var(--line);border-radius:12px;background:var(--background);box-shadow:0 8px 32px #0002; }
+    .move-grip { height:20px; font-size:16px; color:var(--muted); background:transparent; cursor:grab; touch-action:none; user-select:none; }
+    .move-grip:active { cursor:grabbing; }
+    :host([data-side="left"]) .status, :host([data-side="left"]) .quick-frame { right:auto; left:52px; }
 
     @media (prefers-reduced-motion:reduce) { button { transition:none; } }
   `;
@@ -42,11 +45,12 @@
   const expand = document.createElement('button');
   expand.type = 'button'; expand.className = 'expand'; expand.textContent = '栖';
   expand.title = '展开栖边'; expand.setAttribute('aria-label', '展开栖边');
+  const grip = document.createElement('button'); grip.type = 'button'; grip.className = 'move-grip'; grip.textContent = '⠿'; grip.title = '拖动调整位置；方向键微调'; grip.setAttribute('aria-label', '移动栖边位置');
   const cards = document.createElement('div'); cards.className = 'cards';
   const status = document.createElement('div'); status.className = 'status'; status.hidden = true; status.setAttribute('role', 'status');
   const collapse = document.createElement('button'); collapse.type = 'button'; collapse.className = 'frame-collapse'; collapse.textContent = '⇥'; collapse.title = '切换到小图标模式'; collapse.setAttribute('aria-label', '切换到小图标模式'); collapse.hidden = true;
   collapse.addEventListener('click', collapsePanel);
-  rail.append(expand, cards);
+  rail.append(grip, expand, cards);
   shadow.append(style, rail, status, collapse);
   document.documentElement.append(host);
 
@@ -62,10 +66,55 @@
     graphite: { light:{ background:'#f2f3f4',surface:'#ffffff',text:'#282b2e',muted:'#70767c',line:'#d9dcdf',accent:'#4d5963',onAccent:'#ffffff' }, dark:{ background:'#17191b',surface:'#232629',text:'#edf0f2',muted:'#a8afb5',line:'#3d4247',accent:'#b9c3ca',onAccent:'#182027' } }
   };
   const defaultCards = [{ id:'welcome', type:'note', title:'留一点空间给自己' }, { id:'clock', type:'clock', title:'此刻' }, { id:'media', type:'media', title:'我的播放器' }];
-  const glyphs = { website:'↗', file:'▤', weather:'☀', feed:'≋', media:'▶', note:'✎', clock:'◷' };
+  const glyphs = { website:'↗', shortcut:'◇', file:'▤', weather:'☀', feed:'≋', media:'▶', note:'✎', clock:'◷' };
   const colorQuery = matchMedia('(prefers-color-scheme: dark)');
   let workspace = {}, visible = true, statusTimer, frame, frameReady = false, pendingFocus = '', music = {}, quickFrame;
   let nativeOpen = false, surfaceRevision = 0, opening = false;
+  let dragging = null;
+  function position(value = workspace.settings || {}) {
+    const side = value.railSide === 'left' ? 'left' : 'right';
+    host.dataset.side = side;
+    host.style.setProperty(side, '8px', 'important'); host.style.setProperty(side === 'left' ? 'right' : 'left', 'auto', 'important');
+    if (host.dataset.mode === 'expanded') return;
+    const offset = Number.isFinite(Number(value.railOffset)) && value.railOffset != null ? Math.max(0, Math.min(1, Number(value.railOffset))) : 0.15;
+    const available = Math.max(0, innerHeight - 16 - host.getBoundingClientRect().height);
+    host.style.setProperty('top', `${8 + available * offset}px`, 'important');
+    // Pop-up widgets always fit below the rail, even if it is dragged near the bottom.
+    if (quickFrame) quickFrame.style.top = `${Math.max(0, Math.min(host.getBoundingClientRect().top, innerHeight - quickFrame.getBoundingClientRect().height - 8)) - host.getBoundingClientRect().top}px`;
+    status.style.top = `${Math.min(0, innerHeight - host.getBoundingClientRect().top - 120)}px`;
+  }
+  function updatePosition() { if (!dragging) position(); }
+  async function persistPosition(side, offset) {
+    workspace.settings = { ...(workspace.settings || {}), railSide:side, railOffset:offset }; position();
+    try { const result = await chrome.runtime.sendMessage({ type:'qibian:rail-position', side, offset }); if (!result?.ok) throw new Error(result?.error || '位置保存失败，请刷新后重试。'); }
+    catch (error) { showError(error); }
+  }
+  grip.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    event.preventDefault(); grip.setPointerCapture(event.pointerId);
+    dragging = { id:event.pointerId, startY:event.clientY, originalTop:host.getBoundingClientRect().top, side:host.dataset.side || 'right', offset:workspace.settings?.railOffset ?? 0.15, moved:false };
+  });
+  grip.addEventListener('pointermove', event => {
+    if (!dragging || dragging.id !== event.pointerId) return;
+    const available = Math.max(0, innerHeight - 16 - host.getBoundingClientRect().height);
+    dragging.side = event.clientX < innerWidth / 2 ? 'left' : 'right';
+    dragging.offset = available ? Math.max(0, Math.min(1, (dragging.originalTop + event.clientY - dragging.startY - 8) / available)) : 0;
+    dragging.moved = true; position({ railSide:dragging.side, railOffset:dragging.offset });
+  });
+  grip.addEventListener('pointerup', event => {
+    if (!dragging || dragging.id !== event.pointerId) return;
+    const result = dragging; dragging = null; grip.releasePointerCapture(event.pointerId);
+    if (result.moved) void persistPosition(result.side, result.offset);
+  });
+  grip.addEventListener('pointercancel', () => { dragging = null; updatePosition(); });
+  grip.addEventListener('keydown', event => {
+    if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key)) return;
+    event.preventDefault(); const settings = workspace.settings || {};
+    const offset = Number(settings.railOffset ?? 0.15), step = event.shiftKey ? 0.1 : 0.02;
+    void persistPosition(event.key === 'ArrowLeft' ? 'left' : event.key === 'ArrowRight' ? 'right' : settings.railSide || 'right', event.key === 'Home' ? 0 : event.key === 'End' ? 1 : Math.max(0, Math.min(1, offset + (event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0))));
+  });
+  window.addEventListener('resize', updatePosition);
+  const resizeObserver = new ResizeObserver(updatePosition); resizeObserver.observe(rail);
   const extensionOrigin = new URL(chrome.runtime.getURL('/')).origin;
   function updateVisibility() {
     const hidden = nativeOpen || !!document.fullscreenElement;
@@ -95,9 +144,9 @@
     if (frame) frame.hidden = true;
     rail.hidden = false; collapse.hidden = true; host.dataset.mode = 'mini'; updateVisibility();
     host.style.setProperty('width', '44px', 'important');
-    host.style.setProperty('top', 'min(100px,15vh)', 'important');
     host.style.setProperty('height', 'auto', 'important');
-    host.style.setProperty('max-height', 'calc(100vh - 120px)', 'important');
+    host.style.setProperty('max-height', 'calc(100vh - 16px)', 'important');
+    position();
     if (focus) expand.focus();
   }
   function applyNativeState(open) {
@@ -140,6 +189,7 @@
     host.style.setProperty('top', '8px', 'important');
     host.style.setProperty('height', 'calc(100vh - 16px)', 'important');
     host.style.setProperty('max-height', 'none', 'important');
+    position();
   }
   function frameMessage(event) {
     if (quickFrame && event.source === quickFrame.contentWindow && event.origin === extensionOrigin) {
@@ -156,7 +206,7 @@
   expand.addEventListener('click', () => openPanel());
   async function activateCard(card, button) {
     if (button.disabled) return;
-    if (card.type === 'website' || card.type === 'media') {
+    if (card.type === 'website' || card.type === 'media' || card.type === 'shortcut') {
       button.disabled = true;
       try {
         const result = await chrome.runtime.sendMessage({ type:'qibian:activate-card', cardId:card.id });
@@ -169,6 +219,7 @@
     if (quickFrame?.dataset.cardId === card.id) { quickFrame.remove(); quickFrame = null; return; }
     quickFrame?.remove(); quickFrame = document.createElement('iframe'); quickFrame.className = 'quick-frame'; quickFrame.title = card.title; quickFrame.dataset.cardId = card.id;
     quickFrame.src = chrome.runtime.getURL('sidepanel.html?embedded=1&quick=1&card=' + encodeURIComponent(card.id)); shadow.append(quickFrame);
+    position();
   }
   function render(value) {
     workspace = value && typeof value === 'object' ? value : {};
@@ -184,7 +235,7 @@
       button.dataset.name = String(card.type === 'media' ? card.playlistName || card.title : card.title || '未命名卡片').slice(0,120);
       button.title = button.dataset.name;
       button.setAttribute('aria-label', '在栖边中打开：' + button.title);
-      const icon = card.type === 'website' && typeof card.icon === 'string' ? card.icon : '';
+      const icon = ['website','shortcut'].includes(card.type) && typeof card.icon === 'string' ? card.icon : '';
       if (/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+=*$/.test(icon) && icon.length <= 350000) {
         const img = document.createElement('img'); img.src = icon; img.alt = ''; button.append(img);
       } else {
@@ -198,6 +249,7 @@
     }
     cards.scrollTop = offset;
     updateMusic();
+    updatePosition();
   }
   function updateMusic() {
     for (const node of cards.children) {
@@ -234,6 +286,7 @@
     colorQuery.removeEventListener('change', applyTheme);
     document.removeEventListener('fullscreenchange', updateVisibility);
     window.removeEventListener('message', frameMessage);
+    window.removeEventListener('resize', updatePosition); resizeObserver.disconnect();
     host.remove();
   } };
   render(null);

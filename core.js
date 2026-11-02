@@ -1,4 +1,4 @@
-export const kinds = { website: '网站', file: '文件', weather: '天气', feed: '信息流', media: '媒体', note: '便笺', clock: '时钟' };
+export const kinds = { website: '网站', shortcut: '快捷方式', file: '文件', weather: '天气', feed: '信息流', media: '媒体', note: '便笺', clock: '时钟' };
 export const paletteDefaults = () => ({
   light: { background: '#f5f5ef', surface: '#fffefa', text: '#2a332d', muted: '#737c70', line: '#dce2d6', accent: '#547665', onAccent: '#ffffff' },
   dark: { background: '#1d2420', surface: '#252d27', text: '#e6ebdf', muted: '#a2ad9e', line: '#3b463d', accent: '#91b5a0', onAccent: '#14271b' }
@@ -17,7 +17,7 @@ export function resolvedPalette(settings, mode) {
 }
 export const defaults = () => ({
   version: 1,
-  settings: { theme: 'light', palettePreset: 'graphite', palettes: paletteDefaults(), radius: 12, density: 'comfortable', columns: '1' },
+  settings: { theme: 'light', palettePreset: 'graphite', palettes: paletteDefaults(), radius: 12, density: 'comfortable', columns: '1', railSide:'right', railOffset:0.15 },
   cards: [
     { id: 'welcome', type: 'note', title: '留一点空间给自己', text: '把常用的网站、随手的灵感和喜欢的声音，都放在这里。\n\n点击下方「添加内容」，开始布置你的侧边栏。', height: 220 },
     { id: 'clock', type: 'clock', title: '此刻', height: 190 },
@@ -28,6 +28,14 @@ export function safeURL(value) {
   const url = new URL(value);
   if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw new Error('请输入有效的 http 或 https 地址，不含用户名和密码。');
   return url.href;
+}
+export function safeShortcutURL(value) {
+  const url = new URL(value);
+  if (['http:', 'https:'].includes(url.protocol)) return safeURL(value);
+  if (url.username || url.password || url.port) throw new Error('快捷地址不能包含凭据或端口。');
+  if (['chrome-extension:', 'extension:'].includes(url.protocol) && /^[a-p]{32}$/.test(url.hostname)) return url.href;
+  if (['edge:', 'chrome:'].includes(url.protocol) && ['extensions','favorites','bookmarks','downloads','history','settings'].includes(url.hostname)) return url.href;
+  throw new Error('请填写网页地址、已安装扩展的页面地址，或收藏夹/下载等浏览器页面地址。');
 }
 export function moveCard(cards, from, to) {
   const result = [...cards];
@@ -71,7 +79,8 @@ export function validateState(value) {
     palettePreset: ['forest', 'ocean', 'sunset', 'lavender', 'graphite', 'custom'].includes(s.palettePreset) ? s.palettePreset : (s.palettes || s.accent ? 'custom' : 'forest'),
     palettes,
     radius: s.radius == null ? 20 : Math.max(0, Math.min(32, Number(s.radius) || 0)),
-    density: s.density === 'compact' ? 'compact' : 'comfortable', columns: s.columns === '2' ? '2' : '1'
+    density: s.density === 'compact' ? 'compact' : 'comfortable', columns: s.columns === '2' ? '2' : '1',
+    railSide:s.railSide === 'left' ? 'left' : 'right', railOffset:Number.isFinite(Number(s.railOffset)) && s.railOffset != null ? Math.max(0, Math.min(1, Number(s.railOffset))) : 0.15
   };
   const ids = new Set();
   base.cards = value.cards.map(c => {
@@ -80,6 +89,7 @@ export function validateState(value) {
     const item = { id: c.id, type: c.type, title: String(c.title || kinds[c.type]).slice(0, 120), height: Math.max(160, Math.min(600, Number(c.height) || 220)) };
     if (['website', 'feed'].includes(c.type)) item.url = safeURL(c.url);
     if (c.type === 'website') { item.icon = safeIcon(c.icon); item.autoIcon = c.autoIcon === true; }
+    if (c.type === 'shortcut') { item.url = safeShortcutURL(c.url); item.icon = safeIcon(c.icon); }
     if (c.type === 'note') item.text = String(c.text || '').slice(0, 30000);
     if (c.type === 'weather') {
       if (!Number.isFinite(c.latitude) || !Number.isFinite(c.longitude) || Math.abs(c.latitude) > 90 || Math.abs(c.longitude) > 180) throw new Error('天气坐标无效。');

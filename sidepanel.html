@@ -15,6 +15,7 @@
   <dialog id="settings"><div class="dialog-heading"><div><div class="eyebrow"></div><h2>外观与设置</h2></div><button class="icon-button close-dialog" aria-label="关闭">×</button></div>
     <form id="settings-form">
       <label>显示主题<select name="theme"><option value="light">浅色方案</option><option value="dark">深色方案</option><option value="system">跟随系统</option></select></label>
+      <div class="settings-section"><h3>栖边位置</h3><label>停靠侧<select name="railSide" aria-label="停靠侧"><option value="right">右侧</option><option value="left">左侧</option></select></label><label>垂直位置<input type="range" name="railOffset" aria-label="垂直位置" min="0" max="1" step="0.01"></label><p class="muted">拖动网页图标栏顶部的 ⠿ 把手可上下移动、切换左右侧，位置自动保存。展开的网页面板跟随停靠侧；浏览器原生侧栏位置由 Edge/Chrome 管理。</p><button type="button" id="reset-rail-position" class="secondary">恢复默认位置</button></div>
       <label>全局圆角 <output id="radius-value">20 px</output><input type="range" name="radius" min="0" max="32" step="2"></label>
       <p class="muted">卡片、设置窗口和其他弹窗共用此圆角。</p>
       <div class="two-fields"><label>间距<select name="density"><option value="comfortable">舒适</option><option value="compact">紧凑</option></select></label><label>布局<select name="columns"><option value="1">单列</option><option value="2">双列（宽屏）</option></select></label></div>

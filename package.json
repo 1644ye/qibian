@@ -1,6 +1,6 @@
 {
   "name": "qibian-edge-sidebar",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.25.0",
@@ -8,7 +8,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:sync": "node scripts/build-sync.mjs",
-    "test": "node --test tests/core.test.js tests/importers.test.js tests/rail.test.mjs tests/music-workspace.test.js tests/panel-transport.test.js tests/sync-server.test.mjs",
+    "test": "node --test tests/core.test.js tests/importers.test.js tests/rail.test.mjs tests/music-workspace.test.js tests/panel-transport.test.js tests/sync-server.test.mjs tests/position-shortcuts.test.js",
     "check": "node scripts/check.mjs",
     "test:edge": "node tests/modern-browser.mjs",
     "test:sync": "node tests/sync-browser.mjs",

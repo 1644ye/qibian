@@ -7,7 +7,7 @@ import { startServer } from '../companion/server.mjs';
 import { defaults } from '../core.js';
 const origin = 'chrome-extension://abcdefghijklmnopabcdefghijklmnop';
 await mkdir(resolve('artifacts'), { recursive:true });
-async function peer(server, name, token = server.token) {
+async function peer(server, name, token = server.token, protocol = 2) {
   const ws = new WebSocket(`ws://127.0.0.1:${server.port}/sync`, { origin });
   const pending = new Map(), events = [];
   ws.on('message', raw => {
@@ -16,7 +16,7 @@ async function peer(server, name, token = server.token) {
   });
   await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
   const send = message => ws.send(JSON.stringify(message));
-  send({ type:'hello', clientId:name, name, token });
+  send({ type:'hello', clientId:name, name, token, protocol });
   await new Promise((resolve, reject) => { ws.once('message', raw => JSON.parse(raw).type === 'authenticated' ? resolve() : reject(new Error('Not authenticated'))); ws.once('close', () => reject(new Error('Authentication rejected'))); });
   const rpc = message => new Promise((resolve, reject) => { const request = crypto.randomUUID(); pending.set(request, { resolve, reject }); send({ ...message, request }); });
   return { ws, send, rpc, events };
@@ -26,6 +26,7 @@ test('local service authenticates, streams binary files, merges and acknowledges
   let server = await startServer({ directory, port:0 }); const peers = [];
   try {
     await assert.rejects(peer(server, 'invalid-client', 'wrong-key'), /rejected/);
+    await assert.rejects(peer(server, 'legacy-client', server.token, 1), /rejected/);
     const base = `http://127.0.0.1:${server.port}/files/test-file`;
     assert.equal((await fetch(base)).status, 401);
     assert.equal((await fetch(base, { headers:{ Origin:'https://evil.example', Authorization:`Bearer ${server.token}` } })).status, 403);

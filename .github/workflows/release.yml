@@ -67,6 +67,8 @@ jobs:
         run: node tests/display-mode-browser.mjs --return-to-web --with-music --exclusive-surfaces
       - name: Repeated native state notification race
         run: node tests/rail-race-browser.mjs
+      - name: Movable rail and extension shortcuts
+        run: node tests/position-shortcuts-browser.mjs
       - name: Real Edge and Chrome synchronization
         run: node tests/sync-browser.mjs
       - name: Save complete verified assets

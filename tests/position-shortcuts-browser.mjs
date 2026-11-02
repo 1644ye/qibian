@@ -1,0 +1,97 @@
+import assert from 'node:assert/strict';
+import { mkdir, readFile, writeFile, cp } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { generateKeyPairSync, createHash } from 'node:crypto';
+import { WebSocketServer } from 'ws';
+import { loadChromium, edgeLaunchOptions } from './browser-runtime.mjs';
+const version=JSON.parse(await readFile('manifest.json','utf8')).version;
+const root=resolve(process.env.QIBIAN_EXTENSION_ROOT || `dist/qibian-edge-${version}`), directory=resolve('artifacts','position-shortcuts-'+Date.now());
+await mkdir(directory,{recursive:true});
+const fixture=resolve(directory,'OneTab'), key=generateKeyPairSync('rsa',{modulusLength:2048}).publicKey.export({type:'spki',format:'der'});
+const id=createHash('sha256').update(key).digest('hex').slice(0,32).replace(/[0-9a-f]/g,x=>String.fromCharCode(97+parseInt(x,16)));
+await mkdir(fixture); await writeFile(resolve(fixture,'manifest.json'),JSON.stringify({manifest_version:3,name:'OneTab fixture',version:'1.0',key:key.toString('base64')}));
+await writeFile(resolve(fixture,'onetab.html'),'<meta charset="utf-8"><title>OneTab</title><h1>OneTab fixture</h1>');
+const chromium=await loadChromium();
+const context=await chromium.launchPersistentContext('',{...edgeLaunchOptions(),headless:true,viewport:{width:1200,height:850},args:[`--disable-extensions-except=${root},${fixture}`,`--load-extension=${root},${fixture}`]});
+const passed=[],errors=[];
+try {
+  await context.route('https://fixture.test/**',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><title>Page</title><h1>Page</h1>'}));
+  const worker=context.serviceWorkers()[0]||await context.waitForEvent('serviceworker');
+  const page=await context.newPage(); page.on('pageerror',e=>errors.push(e.message)); await page.goto('https://fixture.test/position');
+  const rail=page.locator('#qibian-mini-rail'); await rail.getByRole('button',{name:'移动栖边位置',exact:true}).waitFor();
+  const read=()=>worker.evaluate(async()=>(await chrome.storage.local.get('workspace')).workspace);
+  const grip=rail.getByRole('button',{name:'移动栖边位置',exact:true}); const box=await grip.boundingBox();
+  await page.mouse.move(box.x+box.width/2,box.y+box.height/2); await page.mouse.down(); await page.mouse.move(24,480,{steps:8}); await page.mouse.up();
+  await page.waitForFunction(()=>document.querySelector('#qibian-mini-rail').dataset.side==='left');
+  for(let i=0;i<100&&(await read())?.settings.railSide!=='left';i++) await new Promise(r=>setTimeout(r,20));
+  const saved=(await read()).settings; assert.equal(saved.railSide,'left'); assert.ok(saved.railOffset>.35);
+  assert.equal(Math.round((await rail.boundingBox()).x),8);
+  passed.push('actual pointer drag docks left, moves vertically and persists');
+  await page.reload(); await rail.getByRole('button',{name:'移动栖边位置',exact:true}).waitFor();
+  await page.waitForFunction(()=>document.querySelector('#qibian-mini-rail').dataset.side==='left');
+  assert.ok((await rail.boundingBox()).y>250);
+  await grip.focus(); await page.keyboard.press('ArrowRight'); await page.waitForFunction(()=>document.querySelector('#qibian-mini-rail').dataset.side==='right');
+  await grip.focus(); await page.keyboard.press('ArrowLeft');
+  await rail.getByRole('button',{name:'打开 此刻',exact:true}).click();
+  const popup=await rail.locator('.quick-frame').boundingBox(); assert.ok(popup.x>=50); assert.ok(popup.y>=0&&popup.y+popup.height<=851);
+  passed.push('reload restores position; keyboard moves it; left-side quick widget fits the viewport');
+  await rail.getByRole('button',{name:'展开栖边',exact:true}).click();
+  const panel=page.frameLocator('#qibian-mini-rail iframe.workspace-frame'); await panel.locator('.shell').waitFor();
+  assert.equal(Math.round((await rail.boundingBox()).x),8);
+  await panel.getByRole('button',{name:'外观与设置',exact:true}).click();
+  await panel.getByLabel('停靠侧',{exact:true}).selectOption('right'); await page.waitForFunction(()=>document.querySelector('#qibian-mini-rail').dataset.side==='right');
+  await panel.getByRole('button',{name:'恢复默认位置',exact:true}).click();
+  await panel.locator('#settings .close-dialog').click();
+  assert.equal((await read()).settings.railSide,'right');
+  passed.push('expanded panel follows dock side; settings and reset update all surfaces');
+  await panel.getByRole('button',{name:/添加内容/}).click(); await panel.locator('#type-picker').getByRole('button',{name:/快捷方式/}).click();
+  await panel.getByLabel('卡片名称',{exact:true}).fill('OneTab'); await panel.getByLabel('快捷地址',{exact:true}).fill(`chrome-extension://${id}/onetab.html`);
+  await panel.getByLabel('网站图标（文字或表情）',{exact:true}).fill('O');
+  await panel.locator('#submit-card').click(); await panel.locator('#editor').waitFor({state:'hidden'});
+  const item=(await read()).cards.find(c=>c.type==='shortcut'); assert.equal(item.icon,'O');
+  const newTab=context.waitForEvent('page'); await panel.getByRole('button',{name:'打开快捷方式',exact:true}).click(); const oneTab=await newTab;
+  await oneTab.getByRole('heading',{name:'OneTab fixture'}).waitFor(); await oneTab.close();
+  await panel.getByRole('button',{name:'切换到小图标模式',exact:true}).click();
+  const shortcut=rail.locator(`[data-card-id="${item.id}"]`); assert.equal(await shortcut.textContent(),'O');
+  const nextTab=context.waitForEvent('page'); await shortcut.click(); const opened=await nextTab; await opened.getByRole('heading',{name:'OneTab fixture'}).waitFor(); await opened.close();
+  assert.equal(await rail.getAttribute('data-mode'),'mini');
+  passed.push('unprivileged production build creates real extension shortcut; full and mini modes open it directly');
+  await page.setViewportSize({width:420,height:500}); await grip.focus(); await page.keyboard.press('End');
+  const narrow=await rail.boundingBox(); assert.ok(narrow.y>=0&&narrow.y+narrow.height<=500);
+  await worker.evaluate(async()=>{const {workspace}=await chrome.storage.local.get('workspace'); workspace.cards.push(...Array.from({length:50},(_,i)=>({id:'extra-'+i,type:'clock',title:'Extra '+i,height:160}))); await chrome.storage.local.set({workspace});});
+  await rail.locator('[data-card-id="extra-49"]').waitFor({state:'attached'});
+  const list=await rail.locator('nav.rail').boundingBox(); assert.ok(list.y>=0&&list.y+list.height<=500);
+  passed.push('long icon lists remain within the viewport after resizing and bottom docking');
+  await page.screenshot({path:resolve(directory,'narrow-position.png')});
+  const legacy=new WebSocketServer({host:'127.0.0.1',port:0});
+  await new Promise(r=>legacy.once('listening',r)); let legacyJoins=0;
+  legacy.on('connection',socket=>socket.on('message',raw=>{const m=JSON.parse(raw);if(m.type==='hello')socket.send(JSON.stringify({type:'authenticated'}));if(m.type==='join')legacyJoins++;}));
+  try {
+    const before=JSON.stringify(await read()), ui=await context.newPage();
+    await ui.goto(worker.url().split('/').slice(0,3).join('/')+'/music.html');
+    await ui.evaluate(config=>chrome.runtime.sendMessage({type:'sync:configure',config}),{enabled:true,port:legacy.address().port,token:'legacy-fixture',name:'Version check'});
+    for(let i=0;i<100;i++){const status=await worker.evaluate(async()=>(await chrome.storage.local.get('syncStatus')).syncStatus);if(status?.error?.includes('版本过旧'))break;await new Promise(r=>setTimeout(r,20));}
+    const status=await worker.evaluate(async()=>(await chrome.storage.local.get('syncStatus')).syncStatus);
+    assert.match(status.error,/版本过旧/);assert.equal(legacyJoins,0);assert.equal(JSON.stringify(await read()),before);
+    passed.push('old sync services are rejected before workspace transfer, preserving shortcuts and position');
+    await ui.close();
+  } finally {for(const socket of legacy.clients)socket.terminate();await new Promise(r=>legacy.close(r));}
+  assert.deepEqual(errors,[]);
+} finally {await context.close();}
+// This second fixture represents the user having explicitly granted optional tabs access.
+const granted=resolve(directory,'granted-extension'); await cp(root,granted,{recursive:true});
+const manifest=JSON.parse(await readFile(resolve(granted,'manifest.json'),'utf8')); manifest.permissions.push('tabs'); manifest.optional_permissions=manifest.optional_permissions.filter(p=>p!=='tabs'); await writeFile(resolve(granted,'manifest.json'),JSON.stringify(manifest));
+const ctx=await chromium.launchPersistentContext('',{...edgeLaunchOptions(),headless:true,args:[`--disable-extensions-except=${granted},${fixture}`,`--load-extension=${granted},${fixture}`]});
+try {
+  const worker=ctx.serviceWorkers()[0]||await ctx.waitForEvent('serviceworker'), origin=worker.url().split('/').slice(0,3).join('/');
+  const oneTab=await ctx.newPage(); await oneTab.goto(`chrome-extension://${id}/onetab.html`);
+  const ui=await ctx.newPage(); await ui.goto(origin+'/sidepanel.html');
+  await ui.getByRole('button',{name:/添加内容/}).click(); await ui.locator('#type-picker').getByRole('button',{name:/快捷方式/}).click();
+  await ui.getByRole('button',{name:'读取已打开的 OneTab',exact:true}).click();
+  assert.equal(await ui.getByLabel('快捷地址',{exact:true}).inputValue(),`chrome-extension://${id}/onetab.html`);
+  await ui.locator('#submit-card').click(); await ui.locator('#editor').waitFor({state:'hidden'});
+  const before=ctx.pages().length; await ui.getByRole('button',{name:'打开快捷方式',exact:true}).click();
+  await new Promise(r=>setTimeout(r,150)); assert.equal(ctx.pages().length,before);
+  passed.push('with optional tabs grant, reads open OneTab and focuses existing tab without duplicates');
+} finally {await ctx.close();}
+console.log(JSON.stringify({passed,errors,artifacts:directory},null,2));

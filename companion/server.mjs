@@ -7,6 +7,7 @@ import { randomBytes, createHash, timingSafeEqual, randomUUID } from 'node:crypt
 import { WebSocketServer, WebSocket } from 'ws';
 import { defaults, validateState } from '../core.js';
 import { mergePatch } from '../workspace-store.js';
+import { SYNC_PROTOCOL } from '../sync-model.js';
 
 export async function startServer({ directory, port = 17381, token: suppliedToken } = {}) {
   await mkdir(join(directory, 'files'), { recursive:true });
@@ -77,10 +78,11 @@ export async function startServer({ directory, port = 17381, token: suppliedToke
       if (!message || typeof message !== 'object' || Array.isArray(message)) { socket.close(1008); return; }
       if (message.type === 'hello') {
         if (client || !validToken(message.token) || !/^[\w-]{8,100}$/.test(message.clientId || '') || ['__proto__', 'constructor', 'prototype'].includes(message.clientId)) { socket.close(1008, 'Invalid pairing key'); return; }
+        if (message.protocol !== SYNC_PROTOCOL) { socket.close(1008, 'Unsupported protocol'); return; }
         clearTimeout(authTimer); client = message.clientId;
         const old = peers.get(client); if (old) old.socket.close(1000, 'Reconnected');
         peers.set(client, { id:client, name:String(message.name || '浏览器').slice(0, 60), socket });
-        send(socket, { type:'authenticated' }); roster(); publish(); return;
+        send(socket, { type:'authenticated', protocol:SYNC_PROTOCOL }); roster(); publish(); return;
       }
       if (!client || peers.get(client)?.socket !== socket) return;
       if (message.type === 'ping') { send(socket, { type:'pong' }); return; }

@@ -4,7 +4,8 @@ import { openNativeSidebar } from './panel-launcher.js';
 import { mountTutorial } from './tutorial.js';
 import { mountSyncSettings } from './sync-settings.js';
 import { mountWebsiteEditor } from './website-editor.js';
-import { defaults, kinds, safeURL, safeIcon, moveCard, validateState, weatherLabel, paletteDefaults, palettePresets, resolvedPalette } from './core.js';
+import { openShortcut, mountShortcutEditor } from './shortcut.js';
+import { defaults, kinds, safeURL, safeShortcutURL, safeIcon, moveCard, validateState, weatherLabel, paletteDefaults, palettePresets, resolvedPalette } from './core.js';
 import { parseOneTab, parseBookmarksHTML, flattenBookmarks, prepareWebsiteImport } from './importers.js';
 
 const $ = (s, root = document) => root.querySelector(s);
@@ -15,7 +16,7 @@ const embedded = new URLSearchParams(location.search).has('embedded') && window.
 const quickCardId = new URLSearchParams(location.search).has('quick') ? new URLSearchParams(location.search).get('card') : '';
 let baseline, pendingSaves = 0, musicState = {}, selectedPlaylist = new URLSearchParams(location.search).get('card') || '';
 const ext = Boolean(globalThis.chrome?.runtime?.id);
-const icons = { website: '↗', file: '▤', weather: '☀', feed: '≋', media: '♫', note: '✎', clock: '◷' };
+const icons = { website: '↗', shortcut:'◇', file: '▤', weather: '☀', feed: '≋', media: '♫', note: '✎', clock: '◷' };
 let state, editing = null, selectedType = 'website', selectedCity = null, arranging = false, dragId = null, mediaTarget = null;
 let websiteEditor;
 let toastTimer, saveQueue = Promise.resolve(), panelPort, panelWindowId, pendingEntries = [];
@@ -131,6 +132,10 @@ function render() {
     } else if (card.type === 'clock') {
       body.append(el('span', 'clock-caption', '慢慢来，也很好'), el('div', 'clock-time'), el('div', 'clock-date'));
     } else if (card.type === 'website') renderWebsite(body, card);
+    else if (card.type === 'shortcut') {
+      const row = el('div', 'site-main'); row.append(websiteIcon(card), el('span', 'file-name', card.url));
+      body.append(row, button('打开快捷方式', 'primary', () => openShortcut(chrome, card.url)));
+    }
     else if (card.type === 'file') renderFile(body, card);
     else if (card.type === 'media') renderMedia(body, card);
     else renderRemote(body, card);
@@ -155,7 +160,7 @@ function renderCompactNavigation() {
     const name = card.type === 'media' ? card.playlistName || card.title : card.title;
     const shortcut = button('', 'compact-card', () => activateCompactCard(card), '打开 ' + name);
     shortcut.dataset.cardId = card.id; shortcut.dataset.type = card.type; shortcut.dataset.name = name;
-    if (card.type === 'website') shortcut.append(websiteIcon(card)); else shortcut.textContent = icons[card.type];
+    if (['website','shortcut'].includes(card.type)) shortcut.append(websiteIcon(card)); else shortcut.textContent = icons[card.type];
     shortcut.classList.toggle('playing', card.id === musicState.cardId && !musicState.paused);
     list.append(shortcut);
   }
@@ -172,6 +177,7 @@ function updateCompactIcons() {
   });
 }
 async function activateCompactCard(card) {
+  if (card.type === 'shortcut') { await openShortcut(chrome, card.url); return; }
   if (card.type === 'website') { await openURL(card.url); return; }
   if (card.type === 'media') { await musicCommand(card.id, 'toggle-stop'); return; }
   if (card.type === 'file') { await previewFile(card); return; }
@@ -431,6 +437,15 @@ function renderFields() {
     const b = button('', type === selectedType ? 'active' : '', () => { selectedType = type; selectedCity = null; renderFields(); }); b.append(el('span', '', icons[type]), document.createTextNode(name)); picker.append(b);
   }
   const fields = $('#fields'); fields.replaceChildren(inputField('卡片名称', 'title', editing?.title || '', 'text', true)); $('[name=title]', fields).maxLength = 120;
+  if (selectedType === 'shortcut') {
+    fields.append(inputField('快捷地址', 'url', editing?.url || '', 'text', true));
+    const address = $('[name=url]', fields); address.placeholder = 'chrome-extension://扩展ID/页面.html'; address.maxLength = 8000;
+    fields.append(inputField('网站图标（文字或表情）', 'icon', editing?.icon?.startsWith('data:') ? '' : editing?.icon || '◇'));
+    $('[name=icon]', fields).maxLength = 16;
+    const upload = inputField('或上传图标图片', 'iconFile', '', 'file'); $('input', upload).accept = 'image/png,image/jpeg,image/webp,image/gif'; fields.append(upload);
+    fields.append(el('p', 'muted', '先打开 OneTab 等扩展的页面，复制其地址，或点击下面按钮读取。快捷方式打开对应页面；也支持收藏夹、下载等浏览器页面。上传图标优先。'));
+    if (ext) mountShortcutEditor(fields);
+  }
   if (selectedType === 'website' || selectedType === 'feed') {
     fields.append(inputField(selectedType === 'feed' ? 'RSS / Atom 地址' : '网站地址', 'url', editing?.url || 'https://', 'url', true));
     if (selectedType === 'website') {
@@ -485,6 +500,11 @@ $('#card-form').addEventListener('submit', async event => {
     const card = { ...(editing || {}), id: editing?.id || crypto.randomUUID(), type: selectedType, title: data.get('title').trim(), height: Number(data.get('height')) };
     if (!card.title) throw new Error('请输入卡片名称。');
     if (['website', 'feed'].includes(selectedType)) card.url = safeURL(data.get('url'));
+    if (selectedType === 'shortcut') {
+      card.url = safeShortcutURL(data.get('url').trim());
+      card.icon = safeIcon(data.get('icon').trim() || card.icon || '◇');
+      if (data.get('iconFile')?.size) card.icon = await readIconFile(data.get('iconFile'));
+    }
     if (selectedType === 'website') {
       const keepCustomIcon = card.icon && !card.autoIcon && !websiteEditor?.preferAutomatic;
       const automaticIcon = data.get('iconFile')?.size || data.get('icon').trim() || data.get('resetIcon') === 'on' || keepCustomIcon ? '' : await websiteEditor?.icon(card.url);
@@ -539,7 +559,7 @@ $('#arrange').addEventListener('click', () => { arranging = !arranging; render()
 document.querySelectorAll('.close-dialog').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
 $('#preview').addEventListener('close', () => { $('#preview-body').querySelectorAll('audio,video').forEach(n => n.pause()); $('#preview-body').replaceChildren(); });
 $('#settings-button').addEventListener('click', () => {
-  for (const key of ['theme', 'palettePreset', 'radius', 'density', 'columns']) $('#settings-form').elements[key].value = state.settings[key];
+  for (const key of ['theme', 'palettePreset', 'radius', 'density', 'columns', 'railSide', 'railOffset']) $('#settings-form').elements[key].value = state.settings[key] ?? defaults().settings[key];
   $('#palette-mode').value = document.body.dataset.theme;
   renderSchemePreview(); renderPaletteFields();
   $('#settings').showModal();
@@ -562,11 +582,16 @@ function renderPaletteFields() {
 $('#palette-mode').addEventListener('change', renderPaletteFields);
 $('#reset-palette').addEventListener('click', () => { const mode = $('#palette-mode').value; state.settings.palettes[mode] = paletteDefaults()[mode]; renderPaletteFields(); applySettings(); renderSchemePreview(); void save(); });
 $('#settings-form').addEventListener('submit', e => e.preventDefault());
+$('#reset-rail-position').addEventListener('click', () => {
+  state.settings.railSide = 'right'; state.settings.railOffset = 0.15;
+  $('#settings-form').elements.railSide.value = 'right'; $('#settings-form').elements.railOffset.value = 0.15;
+  void save();
+});
 $('#settings-form').addEventListener('input', event => {
   if (event.target.id === 'palette-mode') return;
   const settings = { ...state.settings };
   if (event.target.dataset.paletteKey) settings.palettes[$('#palette-mode').value][event.target.dataset.paletteKey] = event.target.value;
-  else if (['theme', 'palettePreset', 'radius', 'density', 'columns'].includes(event.target.name)) settings[event.target.name] = event.target.value;
+  else if (['theme', 'palettePreset', 'radius', 'density', 'columns', 'railSide', 'railOffset'].includes(event.target.name)) settings[event.target.name] = event.target.value;
   state.settings = validateState({ ...state, settings }).settings; applySettings(); void save();
   if (event.target.name === 'theme') { $('#palette-mode').value = document.body.dataset.theme; renderPaletteFields(); }
   if (event.target.name === 'theme' || event.target.name === 'palettePreset' || event.target.dataset.paletteKey) renderSchemePreview();
