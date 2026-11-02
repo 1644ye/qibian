@@ -2,19 +2,19 @@
 
 ## 栖边 · 自定义浏览器侧边栏
 
-当前工作区已更新到 **1.6.0**：网页图标栏顶部 ⠿ 可拖动，支持上下调整与左右停靠，设置中可精确调整或恢复默认；新增 OneTab 等扩展页面的快捷方式卡片。通过「添加内容 → 快捷方式」读取已打开的 OneTab/当前页面，或手动粘贴地址，可上传图标。完整面板和小图标模式都能直接打开；获得标签页权限后会复用已打开的页面。本地 1.6.0 成品已构建，本段不表示 GitHub Releases 已发布此版本。启用跨浏览器同步时，请同时更新所有浏览器和本机服务到 1.6.0，以保存新卡片和位置数据。
+**1.6.0** 新增可移动的网页图标栏：顶部 ⠿ 可拖动，支持上下调整与左右停靠，设置中可精确调整或恢复默认；新增 OneTab 等扩展页面的快捷方式卡片。通过「添加内容 → 快捷方式」读取已打开的 OneTab/当前页面，或手动粘贴地址，可上传图标。完整面板和小图标模式都能直接打开；获得标签页权限后会复用已打开的页面。启用跨浏览器同步时，请同时更新所有浏览器和本机服务到 1.6.0，以保存新卡片和位置数据。
 
 栖边把网站、文件、天气、RSS、便笺、时钟和音乐歌单放在浏览器右侧。支持完整面板与 44px 图标栏、卡片复制与排列、网站标题和图标自动读取、上传自定义图标、预设配色，以及同机 Edge / Chrome 之间的文件与音乐控制同步。
 
 ## 推荐下载
 
-到 [GitHub Releases](https://github.com/1644ye/qibian/releases/latest) 下载成品。当前发布版本为 **1.5.2**，沿用已有 1.x 版本规范，本次主要完善可分发包和发布验证。
+到 [1.6.0 Release](https://github.com/1644ye/qibian/releases/tag/v1.6.0) 下载成品。本版沿用已有 1.x 版本规范，新增位置移动、扩展快捷方式及相应同步支持；附件须通过自动构建与验证后才会发布。
 
 | 附件 | 用途 | 平台 |
 | --- | --- | --- |
-| **qibian-1.5.2-windows-x64.zip（推荐下载）** | 完整扩展 + 自带运行时的本机同步服务 + 使用说明 | Windows x64 |
-| qibian-extension-1.5.2.zip | 仅扩展；不需要跨浏览器同步时可选 | 已验证 Windows x64 Edge / Chrome |
-| qibian-sync-1.5.2-windows-x64-portable.zip | 单独的本机同步服务，已内置官方 Node.js 运行时 | Windows x64 |
+| **[qibian-1.6.0-windows-x64.zip（推荐下载）](https://github.com/1644ye/qibian/releases/download/v1.6.0/qibian-1.6.0-windows-x64.zip)** | 完整扩展 + 自带运行时的本机同步服务 + 使用说明 | Windows x64 |
+| [qibian-extension-1.6.0.zip](https://github.com/1644ye/qibian/releases/download/v1.6.0/qibian-extension-1.6.0.zip) | 仅扩展；不需要跨浏览器同步时可选 | 已验证 Windows x64 Edge / Chrome |
+| [qibian-sync-1.6.0-windows-x64-portable.zip](https://github.com/1644ye/qibian/releases/download/v1.6.0/qibian-sync-1.6.0-windows-x64-portable.zip) | 单独的本机同步服务，已内置官方 Node.js 运行时 | Windows x64 |
 | SHA256SUMS.txt | 三个成品压缩包的 SHA-256 校验值 | 文本 |
 
 GitHub 自动生成的 **Source code (zip/tar.gz)** 是源码，不是可直接使用的成品。普通用户不需要安装 Node.js、pnpm、npm，也不需要编译。浏览器本身需要已安装。本次只验证 Windows x64，不声明其他平台或架构兼容性。
@@ -58,4 +58,4 @@ GitHub 自动生成的 **Source code (zip/tar.gz)** 是源码，不是可直接�
 
 [Release 工作流](.github/workflows/release.yml) 支持手动验证和 `vX.Y.Z` 标签发布。普通代码推送不创建 Release。发布前同步 `manifest.json` 与 `package.json` 的版本、更新对应 `releases/vX.Y.Z.md`，推送提交和新标签。流程先完成测试、打包、ZIP 解压验证及浏览器测试，再发布全部资产；已存在的 Release 会拒绝覆盖。预发布标签可在后续明确增加，不对未通过关键验证的成品发布稳定版。
 
-本次验证范围及尚未验证内容见 [1.5.2 发布说明](releases/v1.5.2.md) 与 [验证记录](VALIDATION.md)。测试依赖 Playwright，通过已安装的 Edge / Chrome 运行，不需要本机私人目录；可使用 `PLAYWRIGHT_MODULE`、`QIBIAN_EDGE_PATH` 和 `QIBIAN_CHROME_PATH` 显式指定测试工具位置。
+本次验证范围及尚未验证内容见 [1.6.0 发布说明](releases/v1.6.0.md) 与 [验证记录](VALIDATION.md)。测试依赖 Playwright，通过已安装的 Edge / Chrome 运行，不需要本机私人目录；可使用 `PLAYWRIGHT_MODULE`、`QIBIAN_EDGE_PATH` 和 `QIBIAN_CHROME_PATH` 显式指定测试工具位置。
