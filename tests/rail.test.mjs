@@ -75,9 +75,9 @@ test('toolbar opening failure stays on the current tab and exposes retry status'
 test('opening from the rail calls sidePanel.open before storage and focuses the requested card', async () => {
   const b = background();
   const response = b.message({ type:'qibian:open', cardId:'note-1' });
-  assert.equal(b.calls[1][0], 'open');
-  assert.deepEqual(JSON.parse(JSON.stringify(b.calls[1][1])), { tabId:11 });
-  assert.equal(b.calls[2][0], 'store');
+  assert.ok(b.calls.some(c=>c[0]==='open'));
+  assert.deepEqual(JSON.parse(JSON.stringify(b.calls.find(c=>c[0]==='open')[1])), { windowId:1 });
+  assert.ok(b.calls.findIndex(c=>c[0]==='open') < b.calls.findIndex(c=>c[0]==='store'));
   assert.equal((await response).ok, true);
   assert.equal(b.session.focusCardId, 'note-1');
   assert.equal(b.session.focusWindowId, 1);
@@ -141,10 +141,9 @@ test('collapse uses native close and disables then restores the panel on older E
   assert.deepEqual(old.calls.filter(c => c[0] === 'options').map(c => c[1].enabled), [false, true]);
 });
 
-test('only browser startup resets the expanded mode and reinjects existing webpages', async () => {
+test('browser startup defaults to mini before any panel has opened', async () => {
   const b = background();
   assert.equal(b.calls.some(call => call[0] === 'options'), false);
-  b.chrome.sidePanel.onOpened.fire({ windowId:1 });
   b.chrome.runtime.onStartup.fire();
   await tick();
   const options = b.calls.filter(call => call[0] === 'options');
@@ -159,6 +158,23 @@ test('installation injects the rail into already open webpages', async () => {
   b.chrome.runtime.onInstalled.fire();
   await tick();
   assert.equal(b.calls.find(call => call[0] === 'inject')[1].target.tabId, 11);
+});
+
+test('late startup cannot disable a panel opened from the toolbar', async () => {
+  const b = background();
+  b.chrome.action.onClicked.fire({id:11,windowId:1,url:'https://fixture.test/'});
+  b.chrome.runtime.onStartup.fire();
+  await tick();
+  assert.equal(b.calls.some(c=>c[0]==='options' && c[1].enabled===false),false);
+  assert.equal(b.calls.some(c=>c[0]==='options' && 'tabId' in c[1]),false);
+  assert.equal((await b.message({type:'qibian:rail-state'})).nativeOpen,true);
+});
+
+test('startup also preserves an already connected native panel', async () => {
+  const b=background(), port=panel(1); b.chrome.runtime.onConnect.fire(port);
+  port.onMessage.fire({type:'qibian:panel-ready',windowId:1});
+  b.chrome.runtime.onStartup.fire(); await tick();
+  assert.equal(b.calls.some(c=>c[0]==='options' && c[1].enabled===false),false);
 });
 
 test('native compact transition acknowledges webpage icons before closing native width', async () => {

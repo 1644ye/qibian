@@ -52,7 +52,6 @@ export async function requestMiniTransition(api, windowId, { timeoutMs = 5000 } 
   } catch {
     // Older Edge may lack close(), or expose it without completing the call.
     // Re-enabling immediately can restore the empty native gutter.
-    await step(() => api.sidePanel.setOptions({ tabId:tab.id, enabled:false }), '关闭当前标签页侧栏');
     await step(() => api.sidePanel.setOptions({ enabled:false }), '关闭窗口侧栏');
   }
   return { ok:true, inPage:false, tabId:tab.id };

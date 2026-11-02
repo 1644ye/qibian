@@ -3,6 +3,8 @@ import { writePatch } from './workspace-store.js';
 import { safeURL, defaults, validateState } from './core.js';
 import { createSyncClient } from './sync-client.js';
 import { openShortcut } from './shortcut.js';
+import { installUpdateChecks } from './updates.js';
+installUpdateChecks(chrome);
 let creating;
 let indicator = '';
 async function displayMusic(state) {

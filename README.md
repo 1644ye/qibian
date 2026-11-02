@@ -2,19 +2,19 @@
 
 ## 栖边 · 自定义浏览器侧边栏
 
-**1.6.0** 新增可移动的网页图标栏：顶部 ⠿ 可拖动，支持上下调整与左右停靠，设置中可精确调整或恢复默认；新增 OneTab 等扩展页面的快捷方式卡片。通过「添加内容 → 快捷方式」读取已打开的 OneTab/当前页面，或手动粘贴地址，可上传图标。完整面板和小图标模式都能直接打开；获得标签页权限后会复用已打开的页面。启用跨浏览器同步时，请同时更新所有浏览器和本机服务到 1.6.0，以保存新卡片和位置数据。
+**1.6.1** 修复原生侧栏打开后被启动重置关闭的问题，统一为窗口级侧栏；新增版本检查和 Windows 完整包自动更新。仍保留图标栏位置拖动、OneTab 快捷方式与跨浏览器同步。启用同步时，请一起更新所有浏览器与本机服务。
 
 栖边把网站、文件、天气、RSS、便笺、时钟和音乐歌单放在浏览器右侧。支持完整面板与 44px 图标栏、卡片复制与排列、网站标题和图标自动读取、上传自定义图标、预设配色，以及同机 Edge / Chrome 之间的文件与音乐控制同步。
 
 ## 推荐下载
 
-到 [1.6.0 Release](https://github.com/1644ye/qibian/releases/tag/v1.6.0) 下载成品。本版沿用已有 1.x 版本规范，新增位置移动、扩展快捷方式及相应同步支持；附件须通过自动构建与验证后才会发布。
+到 [1.6.1 Release](https://github.com/1644ye/qibian/releases/tag/v1.6.1) 下载成品。本版沿用已有 1.x 版本规范，修复侧栏关闭并增加更新功能；附件须通过自动构建与验证后才会发布。
 
 | 附件 | 用途 | 平台 |
 | --- | --- | --- |
-| **[qibian-1.6.0-windows-x64.zip（推荐下载）](https://github.com/1644ye/qibian/releases/download/v1.6.0/qibian-1.6.0-windows-x64.zip)** | 完整扩展 + 自带运行时的本机同步服务 + 使用说明 | Windows x64 |
-| [qibian-extension-1.6.0.zip](https://github.com/1644ye/qibian/releases/download/v1.6.0/qibian-extension-1.6.0.zip) | 仅扩展；不需要跨浏览器同步时可选 | 已验证 Windows x64 Edge / Chrome |
-| [qibian-sync-1.6.0-windows-x64-portable.zip](https://github.com/1644ye/qibian/releases/download/v1.6.0/qibian-sync-1.6.0-windows-x64-portable.zip) | 单独的本机同步服务，已内置官方 Node.js 运行时 | Windows x64 |
+| **[qibian-1.6.1-windows-x64.zip（推荐下载）](https://github.com/1644ye/qibian/releases/download/v1.6.1/qibian-1.6.1-windows-x64.zip)** | 完整扩展 + 自带运行时的本机同步服务及自动更新 + 使用说明 | Windows x64 |
+| [qibian-extension-1.6.1.zip](https://github.com/1644ye/qibian/releases/download/v1.6.1/qibian-extension-1.6.1.zip) | 仅扩展，提供版本检查；不自动写入安装目录 | 已验证 Windows x64 Edge / Chrome |
+| [qibian-sync-1.6.1-windows-x64-portable.zip](https://github.com/1644ye/qibian/releases/download/v1.6.1/qibian-sync-1.6.1-windows-x64-portable.zip) | 单独的本机同步服务，已内置官方 Node.js 运行时 | Windows x64 |
 | SHA256SUMS.txt | 三个成品压缩包的 SHA-256 校验值 | 文本 |
 
 GitHub 自动生成的 **Source code (zip/tar.gz)** 是源码，不是可直接使用的成品。普通用户不需要安装 Node.js、pnpm、npm，也不需要编译。浏览器本身需要已安装。本次只验证 Windows x64，不声明其他平台或架构兼容性。
@@ -44,7 +44,7 @@ GitHub 自动生成的 **Source code (zip/tar.gz)** 是源码，不是可直接�
 
 扩展使用当前浏览器配置文件中的 `chrome.storage.local` 和 IndexedDB。同步服务使用 `%LOCALAPPDATA%\QibianSync`，不向程序目录写用户数据。JSON 配置导出不包含文件和音乐本体，请另外保存原文件；服务数据可在退出服务后整体备份。
 
-升级前备份，退出旧服务，覆盖程序文件；扩展保持相同加载目录，在扩展页面点击重新加载并刷新网页。不要卸载旧扩展或更改目录。没有商店自动更新机制。删除程序或取消登录启动不会自动删除本机数据。
+旧版先手动升级一次到 1.6.1：备份并退出旧服务，覆盖程序文件；扩展保持相同加载目录，重新加载并重启浏览器一次。不要卸载旧扩展或更改目录。完整包以后由 `sync/start.cmd` 启动时自动下载和安装新版，成功检查间隔一天；`sync/update.cmd` 可立即更新。安装需要相邻的 `extension`、`sync` 目录与写权限；扩展每 6 小时检查版本，界面均关闭且音乐暂停后自动重新加载，也可手动重新加载或重启浏览器。更新不在使用中关闭侧栏，断网继续使用当前版，程序备份位于服务数据目录的 `updates`。详见[自动更新说明](docs/USER-GUIDE.md)。删除程序或取消登录启动不会自动删除本机数据。
 
 ## 发行与许可状态
 
@@ -58,4 +58,4 @@ GitHub 自动生成的 **Source code (zip/tar.gz)** 是源码，不是可直接�
 
 [Release 工作流](.github/workflows/release.yml) 支持手动验证和 `vX.Y.Z` 标签发布。普通代码推送不创建 Release。发布前同步 `manifest.json` 与 `package.json` 的版本、更新对应 `releases/vX.Y.Z.md`，推送提交和新标签。流程先完成测试、打包、ZIP 解压验证及浏览器测试，再发布全部资产；已存在的 Release 会拒绝覆盖。预发布标签可在后续明确增加，不对未通过关键验证的成品发布稳定版。
 
-本次验证范围及尚未验证内容见 [1.6.0 发布说明](releases/v1.6.0.md) 与 [验证记录](VALIDATION.md)。测试依赖 Playwright，通过已安装的 Edge / Chrome 运行，不需要本机私人目录；可使用 `PLAYWRIGHT_MODULE`、`QIBIAN_EDGE_PATH` 和 `QIBIAN_CHROME_PATH` 显式指定测试工具位置。
+本次验证范围及尚未验证内容见 [1.6.1 发布说明](releases/v1.6.1.md) 与 [验证记录](VALIDATION.md)。测试依赖 Playwright，通过已安装的 Edge / Chrome 运行，不需要本机私人目录；可使用 `PLAYWRIGHT_MODULE`、`QIBIAN_EDGE_PATH` 和 `QIBIAN_CHROME_PATH` 显式指定测试工具位置。

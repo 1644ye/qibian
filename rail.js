@@ -1,7 +1,7 @@
 (() => {
   if (window.top !== window || !/^https?:$/.test(location.protocol)) return;
   const hostId = 'qibian-mini-rail';
-  const revision = '1.6.0';
+  const revision = '1.6.1';
   if (globalThis.__qibianRail?.host?.isConnected && globalThis.__qibianRail.revision === revision) return;
   try { globalThis.__qibianRail?.destroy(); } catch { /* Old extension contexts may already be invalidated after an update. */ }
   document.getElementById(hostId)?.remove();

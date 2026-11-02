@@ -63,7 +63,8 @@ for (const file of [...extensionFiles, ...syncFiles]) {
     for (const match of source.matchAll(/\bimport\(["'](\.[^"']+)["']\)/g)) await required(root, match[1], file);
   }
 }
-for (const name of ['start.cmd', 'start.ps1', 'server.cjs', 'README.md', 'ws-LICENSE.txt', 'THIRD-PARTY-NOTICES.txt', 'runtime/LICENSE', 'runtime-provenance.json']) await required(sync, name);
+for (const name of ['start.cmd', 'start.ps1', 'update.cmd', 'update.ps1', 'version.json', 'server.cjs', 'README.md', 'ws-LICENSE.txt', 'THIRD-PARTY-NOTICES.txt', 'runtime/LICENSE', 'runtime-provenance.json']) await required(sync, name);
+assert.equal(JSON.parse(await readFile(resolve(sync,'version.json'),'utf8')).version,manifest.version);
 const runtime = await readFile(await required(sync, 'runtime/node.exe'));
 assert.equal(runtime.toString('ascii', 0, 2), 'MZ', 'Bundled Node must be a Windows executable');
 const pe = runtime.readUInt32LE(0x3c);

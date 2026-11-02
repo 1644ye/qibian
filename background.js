@@ -4,6 +4,7 @@ const openWindows = new Set();
 const panelPorts = new Map();
 const closeTimers = new Map();
 const miniTransitions = new Map();
+let manualOpenRequested = false;
 const configure = () => chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(console.error);
 
 async function releaseNativePanel(sender, requestedWindowId) {
@@ -35,7 +36,6 @@ async function releaseNativePanel(sender, requestedWindowId) {
     // Keep disabled until the next explicit open. Re-enabling immediately can
     // restore Edge's still-open native surface and retain the blank gutter.
     await chrome.sidePanel.setOptions({ enabled:false });
-    await chrome.sidePanel.setOptions({ tabId:tab.id, enabled:false });
   }
   for (const [port, id] of panelPorts) if (id === windowId) panelPorts.delete(port);
   setPanelVisible(windowId, false);
@@ -74,6 +74,11 @@ chrome.runtime.onInstalled.addListener(() => {
   injectExistingPages().catch(console.error);
 });
 chrome.runtime.onStartup.addListener(() => {
+  // Startup can arrive after a toolbar click or a panel-ready message. Never
+  // disable a surface that the user has already opened during this startup.
+  if (manualOpenRequested || openWindows.size || panelPorts.size) {
+    configure(); injectExistingPages().catch(console.error); return;
+  }
   openWindows.clear();
   panelPorts.clear();
   // Reset only on browser startup, never on an ordinary service-worker restart.
@@ -162,11 +167,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return;
   }
   if (message?.type === 'qibian:open' && Number.isInteger(sender.tab?.id)) {
+    manualOpenRequested = true;
     let opening;
     try {
       // Keep this call in the click's message-handler stack: awaiting storage first
       // loses the user gesture required by Edge's sidePanel.open().
-      opening = chrome.sidePanel.open({ tabId: sender.tab.id });
+      opening = openNativeSidebar(chrome, sender.tab);
     } catch (error) {
       sendResponse({ ok: false, error: error.message });
       return;
@@ -203,6 +209,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 configure();
 
 chrome.action.onClicked.addListener(tab => {
+  manualOpenRequested = true;
   openNativeSidebar(chrome, tab).then(() => {
     setPanelVisible(tab.windowId, true);
     setTimeout(() => reconcilePanel(tab.windowId), 1000);

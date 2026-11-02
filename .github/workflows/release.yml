@@ -57,6 +57,10 @@ jobs:
         run: pnpm test:portable
       - name: Test the bundled service
         run: node tests/sync-bundle-smoke.mjs
+      - name: Automatic program updates preserve user data
+        run: pwsh -File tests/auto-update.ps1
+      - name: Extension update settings
+        run: node tests/updates-browser.mjs
       - name: Website metadata and custom icons
         run: node tests/website-browser.mjs
       - name: Cards, import, export and appearance
@@ -65,6 +69,8 @@ jobs:
         run: node tests/modern-browser.mjs
       - name: Native sidebar and narrow icon rail
         run: node tests/display-mode-browser.mjs --return-to-web --with-music --exclusive-surfaces
+      - name: Native sidebar stays open across idle and navigation
+        run: node tests/display-mode-browser.mjs --return-to-web --exclusive-surfaces --keep-native-open
       - name: Repeated native state notification race
         run: node tests/rail-race-browser.mjs
       - name: Movable rail and extension shortcuts

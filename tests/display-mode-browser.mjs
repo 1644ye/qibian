@@ -92,6 +92,19 @@ try {
   const run=expression=>new Promise((resolve,reject)=>{ const id=++nextId; const timer=setTimeout(()=>{cdp.off('Target.receivedMessageFromTarget',listener);reject(new Error('Native evaluation timed out'));},10000); const listener=event=>{const data=JSON.parse(event.message);if(event.sessionId!==sessionId||data.id!==id)return;clearTimeout(timer);cdp.off('Target.receivedMessageFromTarget',listener);if(data.error)reject(new Error(data.error.message));else resolve(data.result?.result?.value);};cdp.on('Target.receivedMessageFromTarget',listener);cdp.send('Target.sendMessageToTarget',{sessionId,message:JSON.stringify({id,method:'Runtime.evaluate',params:{expression,returnByValue:true,awaitPromise:true}})}).catch(reject);});
   for(let i=0;i<40;i++){if(await run('Boolean(document.querySelector("#compact-navigation"))'))break;await new Promise(r=>setTimeout(r,100));}
   const availableWithNative = await web.evaluate(()=>innerWidth);
+  if(process.argv.includes('--keep-native-open')) {
+    const text='原生侧栏应持续保持打开';
+    await run(`document.querySelector('textarea.note').value=${JSON.stringify(text)}`);
+    await new Promise(resolve=>setTimeout(resolve,35000));
+    assert.ok((await cdp.send('Target.getTargets')).targetInfos.some(t=>t.targetId===target.targetId),'native sidebar survives more than a service worker idle interval');
+    const other=await context.newPage(); await other.goto('https://fixture.test/another-tab'); await other.bringToFront();
+    assert.equal(await other.evaluate(()=>innerWidth),availableWithNative,'global native panel remains open in another tab');
+    await other.goto('https://fixture.test/navigated');
+    assert.equal(await run('document.querySelector("textarea.note").value'),text,'same native document survives navigation');
+    assert.equal(await other.evaluate(()=>innerWidth),availableWithNative);
+    await web.bringToFront(); await other.close();
+    results.push('native sidebar stays open for 35 seconds, across tab switching and webpage navigation without replacing its document');
+  }
   if(stalled) assert.equal(await worker.evaluate(()=>globalThis.defaultInjectionDone),false,'old default injection waits for stalled page loading');
   if(process.argv.includes('--no-transition-worker')) await run(`(() => {
     const connect=chrome.runtime.connect.bind(chrome.runtime), send=chrome.runtime.sendMessage.bind(chrome.runtime);

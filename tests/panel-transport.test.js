@@ -66,7 +66,7 @@ test('missing and stalled close API both disable the panel without restoring the
   for(const close of [()=>{throw new Error('unsupported');},()=>new Promise(()=>{})]) {
     const {api,calls}=fixture({close});
     assert.equal((await requestMiniTransition(api,1,{timeoutMs:5})).ok,true);
-    assert.deepEqual(calls.filter(c=>c[0]==='options').map(c=>c[1]),[{tabId:11,enabled:false},{enabled:false}]);
+    assert.deepEqual(calls.filter(c=>c[0]==='options').map(c=>c[1]),[{enabled:false}]);
   }
 });
 test('stalled injection reports its specific stage and never closes the panel later',async()=>{

@@ -5,7 +5,6 @@ export function openNativeSidebar(api, tab) {
   const pending = [];
   try {
     pending.push(api.sidePanel.setOptions({ path:'sidepanel.html', enabled:true }));
-    if (Number.isInteger(tab.id) && tab.id >= 0) pending.push(api.sidePanel.setOptions({ tabId:tab.id, path:'sidepanel.html', enabled:true }));
     pending.push(api.sidePanel.open({ windowId:tab.windowId }));
   } catch(error) { pending.push(Promise.reject(error)); }
   return Promise.all(pending);

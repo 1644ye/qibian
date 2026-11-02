@@ -89,6 +89,7 @@ try {
   passed.push('playlist names edit independently and new playlists can be selected in manager');
   await music.locator('[name=playMode]').selectOption('repeat-all');
   await music.getByRole('button',{name:'播放 track-104.wav',exact:true}).click();
+  await music.waitForFunction(()=>document.querySelector('.playlist li.active .track-name')?.textContent.includes('track-104.wav') && document.querySelector('.music-status').textContent==='正在播放' && Number(document.querySelector('.music-seek').max)>7.8);
   await music.locator('.music-seek').evaluate(n=>{ n.value='7.8'; n.dispatchEvent(new Event('change',{bubbles:true})); });
   await music.waitForFunction(()=>document.querySelector('.playlist li.active .track-name')?.textContent.includes('track-000.wav'));
   await music.locator('[name=playMode]').selectOption('repeat-one');
@@ -97,6 +98,7 @@ try {
   assert.match(await music.locator('.playlist li.active').textContent(),/track-000/);
   await music.locator('[name=playMode]').selectOption('order');
   await music.getByRole('button',{name:'播放 track-104.wav',exact:true}).click();
+  await music.waitForFunction(()=>document.querySelector('.playlist li.active .track-name')?.textContent.includes('track-104.wav') && document.querySelector('.music-status').textContent==='正在播放' && Number(document.querySelector('.music-seek').max)>7.8);
   await music.locator('.music-seek').evaluate(n=>{ n.value='7.8'; n.dispatchEvent(new Event('change',{bubbles:true})); });
   await music.getByText('已暂停',{exact:true}).waitFor();
   assert.match(await music.locator('.playlist li.active').textContent(),/track-104/);

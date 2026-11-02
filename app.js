@@ -5,12 +5,14 @@ import { mountTutorial } from './tutorial.js';
 import { mountSyncSettings } from './sync-settings.js';
 import { mountWebsiteEditor } from './website-editor.js';
 import { openShortcut, mountShortcutEditor } from './shortcut.js';
+import { mountUpdateSettings } from './updates.js';
 import { defaults, kinds, safeURL, safeShortcutURL, safeIcon, moveCard, validateState, weatherLabel, paletteDefaults, palettePresets, resolvedPalette } from './core.js';
 import { parseOneTab, parseBookmarksHTML, flattenBookmarks, prepareWebsiteImport } from './importers.js';
 
 const $ = (s, root = document) => root.querySelector(s);
 mountTutorial($('#settings'));
 if (globalThis.chrome?.runtime?.id) mountSyncSettings($('#settings'));
+if (globalThis.chrome?.runtime?.id) mountUpdateSettings($('#settings'),()=>saveQueue);
 const manager = location.pathname.endsWith('/music.html');
 const embedded = new URLSearchParams(location.search).has('embedded') && window.parent !== window;
 const quickCardId = new URLSearchParams(location.search).has('quick') ? new URLSearchParams(location.search).get('card') : '';

@@ -22,7 +22,7 @@ execFileSync(powershell, ['-NoProfile', '-NonInteractive', '-Command', zipScript
   env:{ ...process.env, QIBIAN_SMOKE_CREATE:process.env.QIBIAN_SYNC_ARCHIVE ? '0' : '1', QIBIAN_SMOKE_BUILT:built, QIBIAN_SMOKE_ARCHIVE:archive, QIBIAN_SMOKE_EXTRACTED:extracted }, windowsHide:true
 });
 for (const filename of ['server.cjs', 'start.cmd', 'start.ps1', 'runtime/node.exe', 'runtime/LICENSE', 'runtime-provenance.json', 'ws-LICENSE.txt', 'THIRD-PARTY-NOTICES.txt']) assert.ok((await stat(join(extracted, filename))).size > 0, filename);
-for (const filename of ['start.ps1', 'install-autostart.ps1', 'remove-autostart.ps1']) assert.equal((await readFile(join(extracted, filename))).subarray(0, 3).toString('hex'), 'efbbbf', `${filename} must support Windows PowerShell 5.1 UTF-8`);
+for (const filename of ['start.ps1', 'update.ps1', 'install-autostart.ps1', 'remove-autostart.ps1']) assert.equal((await readFile(join(extracted, filename))).subarray(0, 3).toString('hex'), 'efbbbf', `${filename} must support Windows PowerShell 5.1 UTF-8`);
 const data = join(temporary, 'test-user-data');
 async function start() {
   const child = spawn(powershell, ['-NoProfile', '-NonInteractive', '-Command', '& $env:QIBIAN_SMOKE_START'], {
